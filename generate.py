@@ -69,7 +69,15 @@ def generate_collateral(job_req_text):
     }
 
     # 3. Call the API
-    client = genai.Client()
+    # Configure automatic retries for transient server errors (like 503s)
+    http_options = types.HttpOptions(
+        retry_options=types.HttpRetryOptions(
+            initial_delay=2.0,    # Wait 2 seconds before the first retry
+            attempts=5,           # Try up to 5 times before giving up
+            http_status_codes=[429, 500, 502, 503, 504]
+        )
+    )
+    client = genai.Client(http_options=http_options)
     user_prompt = f"Job Req:\n{job_req_text}\n\nMaster Data:\n{json.dumps(master_data)}"
 
     print("Initiating Gemini API Call. Extracting meta and filtering history...")
