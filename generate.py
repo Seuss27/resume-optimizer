@@ -133,9 +133,9 @@ def generate_collateral(job_req_text):
         pypandoc.download_pandoc()
 
     # Temporary markdown files
-    with open("temp_resume.md", "w") as f:
+    with open("temp_resume.md", "w", encoding="utf-8") as f:
         f.write(resume_markdown)
-    with open("temp_cl.md", "w") as f:
+    with open("temp_cl.md", "w", encoding="utf-8") as f:
         f.write(cl_markdown)
 
     # Convert to PDF
