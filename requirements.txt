@@ -1,0 +1,11 @@
+# Google GenAI SDK for Gemini API integration
+google-genai
+
+# Templating engine for the Markdown layout
+Jinja2
+
+# Python wrapper for Pandoc (Markdown to PDF conversion)
+pypandoc
+
+# Environment variable management for API keys
+python-dotenv

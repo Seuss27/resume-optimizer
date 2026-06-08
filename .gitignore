@@ -1,0 +1,23 @@
+# API Keys and Environment Variables
+.env
+
+# Personal Data
+master_data.json
+
+# Generated Outputs
+*.pdf
+output_resume.md
+
+
+# Python Artifacts
+__pycache__/
+*.pyc
+
+# Virtual Environments
+.venv/
+venv/
+env/
+
+# Personal Data Sources
+*.csv
+master_data.json
