@@ -98,9 +98,8 @@ def generate_collateral(job_req_text):
 
     # 5. Inject Data into Jinja2 Templates
     env = Environment(
-    loader=FileSystemLoader('.'),
-    autoescape=select_autoescape(['html', 'xml'])
-)
+        loader=FileSystemLoader("."), autoescape=select_autoescape(["html", "xml"])
+    )
     resume_template = env.get_template("resume_template.md")
     cover_letter_template = env.get_template("cover_letter_template.md")
 
