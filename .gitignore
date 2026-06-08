@@ -7,11 +7,14 @@ master_data.json
 # Generated Outputs
 *.pdf
 output_resume.md
+*.docx
+
 
 
 # Python Artifacts
 __pycache__/
 *.pyc
+*.msi
 
 # Virtual Environments
 .venv/
