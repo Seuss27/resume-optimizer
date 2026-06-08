@@ -84,6 +84,5 @@ def convert_sheets_to_master_data(
 
 
 if __name__ == "__main__":
-    # To run this script locally, ensure you have downloaded your two tabs as CSVs:
-    # convert_sheets_to_master_data('experience.csv', 'profile.csv')
-    pass
+    # Ensure you have downloaded your two tabs as 'experience.csv' and 'profile.csv'
+    convert_sheets_to_master_data('experience.csv', 'profile.csv')
