@@ -24,3 +24,4 @@ env/
 # Personal Data Sources
 *.csv
 master_data.json
+.vscode/*
