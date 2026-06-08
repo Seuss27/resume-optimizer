@@ -2,7 +2,7 @@ import json
 import os
 import re
 import pypandoc
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
@@ -97,7 +97,10 @@ def generate_collateral(job_req_text):
     print(f"AI Processing Complete. Building collateral for: {prefix}")
 
     # 5. Inject Data into Jinja2 Templates
-    env = Environment(loader=FileSystemLoader("."))
+    env = Environment(
+    loader=FileSystemLoader('.'),
+    autoescape=select_autoescape(['html', 'xml'])
+)
     resume_template = env.get_template("resume_template.md")
     cover_letter_template = env.get_template("cover_letter_template.md")
 
