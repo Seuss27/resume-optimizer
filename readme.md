@@ -1,6 +1,6 @@
 # Resume Optimizer 📄🚀
 
-**A "Resume-as-Code" pipeline, because manually tweaking MS Word layouts is a fate worse than debugging DNS. This Python script feeds a job req and your compiled CSV history into the Gemini API, extracts matching skills, and uses Jinja2 and Pandoc to compile pixel-perfect PDFs. It is basically CI/CD for your career collateral.**
+**A "Resume-as-Code" pipeline, because manually tweaking MS Word layouts is nonsense. This Python script feeds a job req and your compiled CSV history into the Gemini API, extracts matching skills, and uses Jinja2 and Pandoc to compile pixel-perfect PDFs. It is basically CI/CD for your career collateral.**
 
 ## Architecture Overview
 
