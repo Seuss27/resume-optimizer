@@ -21,19 +21,19 @@ When you find a job you want to apply for, the engine:
 ## Installation
 
 1. **Clone the repository:**
-   ```bash
+```bash
    git clone [https://github.com/YOUR_USERNAME/resume-optimizer.git](https://github.com/YOUR_USERNAME/resume-optimizer.git)
    cd resume-optimizer
    ```
 
 2. **Set up a virtual environment:**
-   ```bash
+```bash
    python -m venv .venv
    source .venv/bin/activate  # On Windows use: .venv\Scripts\activate
    ```
 
 3. **Install dependencies:**
-   ```bash
+```bash
    pip install -r requirements.txt
    ```
 
@@ -43,13 +43,15 @@ When you find a job you want to apply for, the engine:
 
 1. **Configure your API Key:**
    Create a file named `.env` in the root directory and add your key:
-   ```text
+```text
    GEMINI_API_KEY="your_actual_api_key_here"
    ```
 
 2. **Hydrate your Data:**
-   * Create `profile.csv` with two columns (`Key`, `Value`) for your contact info.
-   * Create `experience.csv` with your tabular work history (e.g., exported directly from a master Google Sheet).
+   * This project includes dummy templates to demonstrate the required data schema. 
+   * Copy `example_profile.csv` and rename it to `profile.csv`, then update it with your actual contact info.
+   * Copy `example_experience.csv` and rename it to `experience.csv`, then populate it with your tabular work history.
+   * *(Note: Your actual `profile.csv` and `experience.csv` files are ignored by git to protect your privacy).*
 
 ## Usage
 
@@ -75,4 +77,5 @@ Check your project directory for your freshly deployed `[Company]_[Role]_Resume.
 * `resume_template.md` - Jinja2 layout for the resume.
 * `cover_letter_template.md` - Jinja2 layout for the cover letter.
 * `system_prompt.txt` - The strict instructional persona fed to the Gemini API.
+* `example_profile.csv` & `example_experience.csv` - Dummy data templates to guide your CSV creation.
 * `requirements.txt` - Python dependencies.
