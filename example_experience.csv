@@ -1,0 +1,5 @@
+Company,Role Title,Years Active,Keywords / Tech Stack,Action Verb,Core Achievement / Responsibility,Measurable Metric / Impact
+Acme Corp,Senior Cloud Architect,2020 - Present,"AWS, Python, Terraform, CI/CD",Architected,scalable cloud infrastructure using Terraform,reducing deployment time by 40%
+Acme Corp,Senior Cloud Architect,2020 - Present,"AWS, Python, Terraform, CI/CD",Migrated,legacy monolith to microservices architecture,resulting in 99.99% uptime
+Globex Inc,Systems Engineer,2015 - 2020,"Linux, Bash, Docker, Jenkins",Automated,routine server maintenance tasks with Bash scripts,saving 15 hours per week
+Globex Inc,Systems Engineer,2015 - 2020,"Linux, Bash, Docker, Jenkins",Implemented,containerized CI/CD pipelines using Docker and Jenkins,accelerating release cycles
