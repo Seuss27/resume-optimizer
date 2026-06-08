@@ -123,7 +123,7 @@ def generate_collateral(job_req_text):
     )
 
     # 6. Compile Final Outputs
-    print(f"Compiling {prefix}_Resume.pdf and {prefix}_CoverLetter.pdf...")
+    print(f"Compiling {prefix}_Resume.docx and {prefix}_CoverLetter.docx...")
 
     # Ensure Pandoc is installed locally; if not, download it automatically
     try:
