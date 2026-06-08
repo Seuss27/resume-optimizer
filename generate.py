@@ -138,9 +138,9 @@ def generate_collateral(job_req_text):
     with open("temp_cl.md", "w", encoding="utf-8") as f:
         f.write(cl_markdown)
 
-    # Convert to PDF
-    pypandoc.convert_file("temp_resume.md", "pdf", outputfile=f"{prefix}_Resume.pdf")
-    pypandoc.convert_file("temp_cl.md", "pdf", outputfile=f"{prefix}_CoverLetter.pdf")
+    # Convert to DOCX
+    pypandoc.convert_file("temp_resume.md", "docx", outputfile=f"{prefix}_Resume.docx")
+    pypandoc.convert_file("temp_cl.md", "docx", outputfile=f"{prefix}_CoverLetter.docx")
 
     # Clean up the temporary markdown files so your folder stays clean
     os.remove("temp_resume.md")
