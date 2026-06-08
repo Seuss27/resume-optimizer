@@ -12,6 +12,3 @@ python-dotenv
 
 # Pandas for data manipulation
 pandas
-
-# Python wrapper for Pandoc (Markdown to PDF conversion)
-pypandoc[tinytex]

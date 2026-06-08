@@ -47,8 +47,10 @@ def convert_sheets_to_master_data(
         )
         master_data["all_skills"] = sorted(flat_skills)
 
-    # 5. Group the dataframe by Company, Role, and Years
-    grouped = df_experience.groupby(["Company", "Role Title", "Years Active"])
+    # 5. Group the dataframe by Company, Role, and Years (Preserve CSV order)
+    grouped = df_experience.groupby(
+        ["Company", "Role Title", "Years Active"], sort=False
+    )
 
     for (company, title, dates), group in grouped:
         role_entry = {
