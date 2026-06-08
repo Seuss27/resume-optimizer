@@ -1,21 +1,21 @@
 # Resume Optimizer 📄🚀
 
-**A "Resume-as-Code" pipeline, because manually tweaking MS Word layouts is nonsense. This Python script feeds a job req and your compiled CSV history into the Gemini API, extracts matching skills, and uses Jinja2 and Pandoc to compile pixel-perfect PDFs. It is basically CI/CD for your career collateral.**
+**A "Resume-as-Code" pipeline, because manually tweaking MS Word layouts is nonsense. This Python script feeds a job req and your compiled CSV history into the Gemini API, extracts matching skills, and uses Jinja2 and Pandoc to compile ATS-friendly Word documents (.docx). It is basically CI/CD for your career collateral.**
 
 ## Architecture Overview
 
-Instead of maintaining dozens of fragmented resume files, this project separates your **State** (who you are and what you've done) from your **Presentation** (the final PDF).
+Instead of maintaining dozens of fragmented resume files, this project separates your **State** (who you are and what you've done) from your **Presentation** (the final .docx file).
 
 When you find a job you want to apply for, the engine:
 1. **Compiles State:** The `build_state.py` preprocessor merges your raw `experience.csv` and `profile.csv` into a single structured JSON state file.
 2. **Filters via AI:** The `generate.py` engine passes the Job Requisition and your state file to the **Gemini API**. The AI acts as a smart filter, returning only the most relevant skills and bullet points, while extracting the Company Name and Role Title.
 3. **Injects & Renders:** The filtered data is injected into dedicated **Jinja2 Markdown templates** for both a resume and a cover letter.
-4. **Deploys:** **Pandoc** compiles the customized Markdown into two perfectly formatted PDFs, dynamically named based on the requisition (e.g., `AcmeCorp_BackendEngineer_Resume.pdf`).
+4. **Deploys:** **Pandoc** compiles the customized Markdown into two perfectly formatted Word documents, dynamically named based on the requisition (e.g., `AcmeCorp_BackendEngineer_Resume.docx`).
 
 ## Prerequisites
 
 * **Python 3.8+**
-* **Pandoc** installed on your system (e.g., `brew install pandoc` or `apt install pandoc`)
+* **Pandoc** (The script will attempt to automatically download the Pandoc engine if it is not found on your system)
 * **Gemini API Key** (Get one at [Google AI Studio](https://aistudio.google.com/))
 
 ## Installation
@@ -60,16 +60,17 @@ python build_state.py
 ```
 
 **Step 2: Generate Collateral**
-Run the core engine and paste the text of the job description when prompted. Press `Enter` then `CTRL+D` (or `CMD+D`) to submit:
+Run the core engine and paste the text of the job description when prompted.
+When finished pasting, press `Enter`, then `CTRL+D` (Mac/Linux) or `CTRL+Z` then `Enter` (Windows) to submit:
 ```bash
 python generate.py
 ```
 
-Check your project directory for your freshly deployed `[Company]_[Role]_Resume.pdf` and `[Company]_[Role]_CoverLetter.pdf`.
+Check your project directory for your freshly deployed `[Company]_[Role]_Resume.docx` and `[Company]_[Role]_CoverLetter.docx`.
 
 ## Project Structure
 
-* `generate.py` - The core application engine (API call, data injection, PDF compilation).
+* `generate.py` - The core application engine (API call, data injection, DOCX compilation).
 * `build_state.py` - The data preprocessor (CSV to JSON).
 * `resume_template.md` - Jinja2 layout for the resume.
 * `cover_letter_template.md` - Jinja2 layout for the cover letter.
