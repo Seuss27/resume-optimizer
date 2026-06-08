@@ -72,9 +72,9 @@ def generate_collateral(job_req_text):
     # Configure automatic retries for transient server errors (like 503s)
     http_options = types.HttpOptions(
         retry_options=types.HttpRetryOptions(
-            initial_delay=2.0,    # Wait 2 seconds before the first retry
-            attempts=5,           # Try up to 5 times before giving up
-            http_status_codes=[429, 500, 502, 503, 504]
+            initial_delay=2.0,  # Wait 2 seconds before the first retry
+            attempts=5,  # Try up to 5 times before giving up
+            http_status_codes=[429, 500, 502, 503, 504],
         )
     )
     client = genai.Client(http_options=http_options)
@@ -124,6 +124,13 @@ def generate_collateral(job_req_text):
 
     # 6. Compile Final Outputs
     print(f"Compiling {prefix}_Resume.pdf and {prefix}_CoverLetter.pdf...")
+
+    # Ensure Pandoc is installed locally; if not, download it automatically
+    try:
+        pypandoc.get_pandoc_version()
+    except OSError:
+        print("Pandoc engine not found. Downloading it now (this only happens once)...")
+        pypandoc.download_pandoc()
 
     # Temporary markdown files
     with open("temp_resume.md", "w") as f:
