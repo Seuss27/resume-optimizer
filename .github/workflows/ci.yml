@@ -31,6 +31,10 @@ jobs:
         # We also install the project requirements to ensure syntax is valid
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
+    - name: Run Test Suite
+      run: |
+        python -m pytest -q
+
     - name: Check Formatting (Black)
       run: |
         # --check fails the pipeline if files are not formatted correctly

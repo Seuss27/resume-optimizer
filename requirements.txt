@@ -12,3 +12,6 @@ python-dotenv
 
 # Pandas for data manipulation
 pandas
+
+# Test framework for unit and integration tests
+pytest
