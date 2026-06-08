@@ -136,8 +136,9 @@ def generate_collateral(job_req_text):
 
 if __name__ == "__main__":
     print("--- The JIT Resume Engine ---")
+    print("Paste the target Job Requisition below.")
     print(
-        "Paste the target Job Requisition below. Press Enter, then CTRL+D (or CMD+D) to submit:\n"
+        "When finished, press Enter, then CTRL+D (Mac/Linux) or CTRL+Z then Enter (Windows) to submit:\n"
     )
 
     import sys
