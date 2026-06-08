@@ -9,3 +9,6 @@ pypandoc
 
 # Environment variable management for API keys
 python-dotenv
+
+# Pandas for data manipulation
+pandas
