@@ -22,6 +22,7 @@ def convert_sheets_to_master_data(
     profile_csv_path,
     certs_csv_path="certifications.csv",
     output_json_path="master_data.json",
+    education_csv_path="education.csv",
 ):
     # Support a common 3-argument call pattern where the third positional
     # argument is intended to be the output path.
@@ -47,6 +48,7 @@ def convert_sheets_to_master_data(
         "all_skills": [],
         "roles": [],
         "certifications": [],
+        "education": [],
     }
 
     # 4. Extract all unique skills from the 'Keywords / Tech Stack' column
@@ -111,7 +113,28 @@ def convert_sheets_to_master_data(
     else:
         raise FileNotFoundError(f"Could not find {certs_csv_path}. Please ensure it exists.")
 
-    # 8. Save out the structured JSON
+    # 8. Extract Education (Graceful Warning Fallback)
+    if os.path.exists(education_csv_path):
+        df_education = pd.read_csv(education_csv_path)
+        for _, row in df_education.iterrows():
+            degree = str(row.get("Degree", "")).strip()
+            institution = str(row.get("Institution", "")).strip()
+            year = str(row.get("Graduation Year", "")).strip()
+
+            if degree and degree != "nan":
+                edu_entry = {
+                    "degree": degree,
+                    "institution": institution if institution and institution != "nan" else "",
+                    "year": year if year and year != "nan" else "",
+                }
+                master_data["education"].append(edu_entry)
+    elif education_csv_path == "education.csv":
+        # Warn the user in the console, but allow the pipeline to proceed safely
+        print(f"WARNING: '{education_csv_path}' not found. Building state without education.")
+    else:
+        raise FileNotFoundError(f"Could not find {education_csv_path}. Please ensure it exists.")
+
+    # 9. Save out the structured JSON
     with open(output_json_path, "w") as f:
         json.dump(master_data, f, indent=4)
 
