@@ -52,6 +52,7 @@ def generate_collateral(job_req_text):
                     "role_title": {"type": "STRING"},
                 },
             },
+            "professional_summary": {"type": "STRING"},
             "selected_skills": {"type": "ARRAY", "items": {"type": "STRING"}},
             "tailored_roles": {
                 "type": "ARRAY",
@@ -112,6 +113,7 @@ def generate_collateral(job_req_text):
 
     resume_markdown = resume_template.render(
         contact=master_data.get("contact", {}),
+        professional_summary=gemini_output.get("professional_summary", ""),
         skills_list=gemini_output.get("selected_skills", []),
         experience=gemini_output.get("tailored_roles", []),
     )
