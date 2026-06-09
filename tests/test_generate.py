@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 from pathlib import Path
 
 import pytest
@@ -15,6 +16,20 @@ def test_clean_filename_normalizes_text():
     assert generate.clean_filename("Acme Inc / Developer") == "Acme_Inc__Developer"
     assert generate.clean_filename("") == "Unknown"
     assert generate.clean_filename(None) == "Unknown"
+
+
+def test_parse_args_defaults_to_no_validation(monkeypatch):
+    monkeypatch.setattr(sys, "argv", ["generate-resume"])
+    args = generate.parse_args()
+
+    assert args.validate is False
+
+
+def test_parse_args_enables_validation_flag(monkeypatch):
+    monkeypatch.setattr(sys, "argv", ["generate-resume", "--validate"])
+    args = generate.parse_args()
+
+    assert args.validate is True
 
 
 def test_generate_collateral_requires_master_data(tmp_path, monkeypatch):
@@ -99,6 +114,87 @@ def test_generate_collateral_builds_docx_files(tmp_path, monkeypatch):
     assert cover_output.exists()
     assert not (tmp_path / "temp_resume.md").exists()
     assert not (tmp_path / "temp_cl.md").exists()
+
+
+def test_generate_collateral_performs_optional_ats_validation(tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "master_data.json").write_text(json.dumps({"contact": {"name": "Alex"}}))
+    (tmp_path / "system_prompt.txt").write_text("system prompt")
+    (tmp_path / "ats_prompt.txt").write_text("ATS parser prompt")
+    (tmp_path / "resume_template.md").write_text(
+        "Resume for {{ contact.name }}\n"
+        "Skills:\n"
+        "{% for skill in skills_list %}- {{ skill }}\n{% endfor %}"
+    )
+    (tmp_path / "cover_letter_template.md").write_text(
+        "Dear {{ contact.name }},\n{{ cover_letter_body }}"
+    )
+
+    class FakeResponse:
+        def __init__(self, text):
+            self.text = text
+
+    class FakeModels:
+        def generate_content(self, model, contents, config):
+            if "ATS parser" in config.system_instruction:
+                return FakeResponse(
+                    json.dumps(
+                        {
+                            "ats_score": 86,
+                            "missing_keywords": ["Python", "CI/CD"],
+                            "formatting_compliance": "Good",
+                            "critical_feedback": (
+                                "Add more role-specific metrics and reduce dense "
+                                "language."
+                            ),
+                        }
+                    )
+                )
+
+            return FakeResponse(
+                json.dumps(
+                    {
+                        "job_metadata": {
+                            "company_name": "Acme Inc",
+                            "role_title": "Developer",
+                        },
+                        "professional_summary": (
+                            "Strategic software engineer specializing in "
+                            "scalable system integrations."
+                        ),
+                        "selected_skills": ["Python", "SQL"],
+                        "tailored_roles": [
+                            {
+                                "title": "Developer",
+                                "company": "Acme Inc",
+                                "dates": "2020-2024",
+                                "bullets": ["Built features."],
+                            }
+                        ],
+                        "cover_letter_body": "Hello from Acme",
+                    }
+                )
+            )
+
+    class FakeClient:
+        def __init__(self, http_options=None):
+            self.models = FakeModels()
+
+    monkeypatch.setattr(generate, "genai", type("DummyGenai", (), {"Client": FakeClient}))
+    monkeypatch.setattr(generate.pypandoc, "get_pandoc_version", lambda: "2.0")
+    monkeypatch.setattr(
+        generate.pypandoc,
+        "convert_file",
+        lambda input_file, fmt, outputfile: Path(outputfile).write_text("fake docx content"),
+    )
+
+    generate.generate_collateral("Target job requisition", validate=True)
+
+    captured = capsys.readouterr()
+    assert "=== ATS Validation Results ===" in captured.out
+    assert "Score: 86/100" in captured.out
+    assert "Python" in captured.out
+    assert "critical_feedback" in captured.out
 
 
 def test_generate_collateral_uses_unknown_prefix_when_metadata_is_missing(tmp_path, monkeypatch):

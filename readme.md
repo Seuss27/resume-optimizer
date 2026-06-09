@@ -82,6 +82,9 @@ hatch run build-state
 
 # Step 2: Paste the target job requisition text to compile outputs
 hatch run generate
+
+# Optional: compile outputs and run ATS validation
+hatch run generate -- --validate
 ```
 
 ### If Using Standard Pip Entry Points (Option B)
@@ -91,6 +94,9 @@ build-resume-state
 
 # Step 2: Paste the target job requisition text to compile outputs
 generate-resume
+
+# Optional: compile outputs and run ATS validation
+generate-resume --validate
 ```
 
 *When running the generation engine, paste the text of the job description when prompted. When finished pasting, press `Enter`, then `CTRL+D` (Mac/Linux) or `CTRL+Z` then `Enter` (Windows) to submit.*

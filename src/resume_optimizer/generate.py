@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 import re
@@ -31,7 +32,70 @@ def clean_filename(text):
     return clean
 
 
-def generate_collateral(job_req_text):
+def load_prompt(prompt_filename):
+    if not os.path.exists(prompt_filename):
+        raise FileNotFoundError(f"{prompt_filename} is missing.")
+
+    with open(prompt_filename, "r", encoding="utf-8") as f:
+        return f.read()
+
+
+def validate_resume(job_req_text, resume_text):
+    ats_prompt = load_prompt("ats_prompt.txt")
+    response_schema = {
+        "type": "OBJECT",
+        "properties": {
+            "ats_score": {"type": "INTEGER"},
+            "missing_keywords": {"type": "ARRAY", "items": {"type": "STRING"}},
+            "formatting_compliance": {"type": "STRING"},
+            "critical_feedback": {"type": "STRING"},
+        },
+    }
+
+    http_options = types.HttpOptions(
+        retry_options=types.HttpRetryOptions(
+            initial_delay=2.0,
+            attempts=5,
+            http_status_codes=[429, 500, 502, 503, 504],
+        )
+    )
+    client = genai.Client(http_options=http_options)
+    user_prompt = f"Job Requisition:\n{job_req_text}\n\nGenerated Resume Text:\n{resume_text}"
+
+    logger.info("Initiating ATS validation Gemini API call.")
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=user_prompt,
+        config=types.GenerateContentConfig(
+            system_instruction=ats_prompt,
+            response_mime_type="application/json",
+            response_schema=response_schema,
+            temperature=0.2,
+        ),
+    )
+
+    return json.loads(response.text)
+
+
+def print_ats_validation_summary(ats_results):
+    print("\n=== ATS Validation Results ===")
+    print(f"Score: {ats_results.get('ats_score', 0)}/100")
+
+    missing_keywords = ats_results.get("missing_keywords") or []
+    if missing_keywords:
+        print("Missing keywords:")
+        for keyword in missing_keywords:
+            print(f"  - {keyword}")
+    else:
+        print("Missing keywords: None")
+
+    print(f"Formatting compliance: {ats_results.get('formatting_compliance', 'N/A')}")
+    print(f"Critical feedback: {ats_results.get('critical_feedback', 'N/A')}")
+    print("\nRaw ATS JSON:")
+    print(json.dumps(ats_results, indent=2))
+
+
+def generate_collateral(job_req_text, validate=False):
     # 1. Load Local State
     if not os.path.exists("master_data.json"):
         raise FileNotFoundError("master_data.json is missing. Run the preprocessor script first.")
@@ -149,6 +213,10 @@ def generate_collateral(job_req_text):
         cover_letter_body=gemini_output.get("cover_letter_body", ""),
     )
 
+    if validate:
+        ats_results = validate_resume(job_req_text, resume_markdown)
+        print_ats_validation_summary(ats_results)
+
     # 6. Compile Final Outputs
     logger.info(
         "Compiling final documents.",
@@ -182,7 +250,27 @@ def generate_collateral(job_req_text):
     logger.info("Successfully deployed generated files.")
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description=(
+            "Generate a job-targeted resume and optionally validate it "
+            "against ATS expectations."
+        )
+    )
+    parser.add_argument(
+        "--validate",
+        action="store_true",
+        help=(
+            "Run a second Gemini review pass to score the generated resume "
+            "against the job requisition."
+        ),
+    )
+    return parser.parse_args()
+
+
 def main():
+    args = parse_args()
+
     print("--- The JIT Resume Engine ---")
     print("Paste the target Job Requisition below.")
     print(
@@ -195,7 +283,7 @@ def main():
     req_input = sys.stdin.read()
 
     if req_input.strip():
-        generate_collateral(req_input)
+        generate_collateral(req_input, validate=args.validate)
     else:
         logger.info("No input detected; exiting without generating collateral.")
         print("No input detected. Exiting.")
