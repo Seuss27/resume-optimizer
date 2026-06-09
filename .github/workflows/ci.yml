@@ -1,6 +1,5 @@
 name: CI Pipeline - Lint & Security
 
-# Trigger the workflow on pushes and pull requests to the main branch
 on:
   push:
     branches: [ "main" ]
@@ -24,30 +23,22 @@ jobs:
         python-version: ${{ matrix.python-version }}
         cache: 'pip'
 
-    - name: Install CI Dependencies
+    - name: Install Project & Dev Dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install black flake8 bandit
-        # We also install the project requirements to ensure syntax is valid
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        # Installs the local package in editable mode along with your dev tools
+        pip install -e .[dev]
 
     - name: Run Test Suite
       run: |
         python -m pytest -q
 
-    - name: Check Formatting (Black)
+    - name: Run Ruff Format Check
       run: |
-        # --check fails the pipeline if files are not formatted correctly
-        black --check .
+        # Verifies formatting compliance without modifying code
+        ruff format --check .
 
-    - name: Lint Code (Flake8)
+    - name: Run Ruff Linter & Security Scan (Bandit rules)
       run: |
-        # Stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # Exit-zero treats all other issues as warnings
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-
-    - name: Security Scan (Bandit)
-      run: |
-        # Recursively scan all Python files, skipping the virtual environment if accidentally committed
-        bandit -r . -x ./.venv/,-./venv/
+        # Runs linting, import checks, and full security scans seamlessly
+        ruff check .

@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
+__version__ = "0.1.0"
+
 load_dotenv()
 
 if not os.environ.get("GEMINI_API_KEY"):

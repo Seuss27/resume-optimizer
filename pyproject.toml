@@ -1,0 +1,75 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "resume-optimizer"
+dynamic = ["version"]
+description = "A 'Resume-as-Code' pipeline using Gemini API, Jinja2, and Pandoc"
+readme = "readme.md"
+requires-python = ">=3.10"
+authors = [
+    { name = "Jared Groves", email = "jgroves27@gmail.com" }
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "google-genai",
+    "Jinja2",
+    "pypandoc",
+    "python-dotenv",
+    "pandas",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+]
+
+[tool.ruff]
+# Target your minimum supported Python version
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+# Enable rulesets replacing your entire tool suite:
+# E/F = Flake8 (errors/warnings)
+# I = Isort (import sorting)
+# S = Bandit (security checks)
+select = ["E", "F", "I", "S"]
+
+# Configure precise rule exclusions
+ignore = [] # Keep this empty so production code is strictly checked
+
+[tool.ruff.lint.per-file-ignores]
+# Target your test suite specifically
+"tests/*" = [
+    "S101", # Allow assert statements for pytest
+    "S105", # Allow dummy hardcoded password strings (e.g., "test-key")
+    "S106", # Allow dummy hardcoded password strings in function arguments
+]
+
+[tool.ruff.format]
+# Matches your prior Black settings
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.hatch.version]
+path = "generate.py"
+
+[tool.hatch.envs.default]
+dependencies = [
+  "pytest",
+  "ruff",
+]
+[tool.hatch.envs.default.scripts]
+test = "pytest {args:tests}"
+lint = "ruff check . && ruff format --check ."
