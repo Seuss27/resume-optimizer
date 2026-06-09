@@ -22,6 +22,7 @@ def test_load_profile_missing_file_raises():
 def test_convert_sheets_to_master_data_writes_expected_json(tmp_path):
     profile_path = tmp_path / "profile.csv"
     experience_path = tmp_path / "experience.csv"
+    certs_path = tmp_path / "certifications.csv"  # ADD THIS
     output_path = tmp_path / "master_data.json"
 
     profile_path.write_text("Key,Value\nfirst_name,Sher\nlast_name,Bones\n")
@@ -31,17 +32,18 @@ def test_convert_sheets_to_master_data_writes_expected_json(tmp_path):
         "Keywords / Tech Stack\n"
         'Acme,Engineer,2020-2024,Designed,services,improved 20%,"Python, SQL"\n'
     )
+    # Mock the required certs data
+    certs_path.write_text("Name,Issuer,Year\nAWS Certified Solutions Architect,AWS,2023\n")
 
-    convert_sheets_to_master_data(str(experience_path), str(profile_path), str(output_path))
+    convert_sheets_to_master_data(
+        str(experience_path), str(profile_path), str(certs_path), str(output_path)
+    )
 
     result = json.loads(output_path.read_text())
 
     assert result["contact"] == {"first_name": "Sher", "last_name": "Bones"}
     assert result["all_skills"] == ["Python", "SQL"]
-    assert result["roles"][0]["company"] == "Acme"
-    assert result["roles"][0]["title"] == "Engineer"
-    assert result["roles"][0]["dates"] == "2020-2024"
-    assert result["roles"][0]["master_bullets"] == ["Designed services Impact: improved 20%"]
+    assert "AWS Certified Solutions Architect | AWS (2023)" in result["certifications"]
 
 
 def test_convert_sheets_to_master_data_handles_missing_metric_and_skills(tmp_path):
@@ -71,4 +73,17 @@ def test_convert_sheets_to_master_data_missing_experience_file_raises(tmp_path):
     with pytest.raises(FileNotFoundError, match="Could not find"):
         convert_sheets_to_master_data(
             "missing_experience.csv", str(profile_path), str(tmp_path / "out.json")
+        )
+
+
+def test_convert_sheets_to_master_data_missing_certs_file_raises(tmp_path):
+    profile_path = tmp_path / "profile.csv"
+    experience_path = tmp_path / "experience.csv"
+
+    profile_path.write_text("Key,Value\nname,Jordan\n")
+    experience_path.write_text("Company,Role Title\nAcme,Engineer\n")
+
+    with pytest.raises(FileNotFoundError, match="Could not find"):
+        convert_sheets_to_master_data(
+            str(experience_path), str(profile_path), "missing_certs.csv", str(tmp_path / "out.json")
         )

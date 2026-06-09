@@ -21,3 +21,17 @@
 {% endfor %}
 
 {% endfor %}
+
+{% if certifications and certifications|length > 0 %}
+## Certifications
+{% for cert in certifications %}
+* {{ cert }}
+{% endfor %}
+{% endif %}
+
+{% if education and education|length > 0 %}
+## Education
+{% for edu in education %}
+* **{{ edu.degree }}** | {{ edu.institution }}{% if edu.year %} ({{ edu.year }}){% endif %}
+{% endfor %}
+{% endif %}
