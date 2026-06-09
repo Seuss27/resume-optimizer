@@ -71,6 +71,18 @@ def generate_collateral(job_req_text):
                     },
                 },
             },
+            "selected_education": {
+                "type": "ARRAY",
+                "items": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "degree": {"type": "STRING"},
+                        "institution": {"type": "STRING"},
+                        "year": {"type": "STRING"},
+                    },
+                },
+                "description": "Optional. Include only educations relevant to the job requisition.",
+            },
             "cover_letter_body": {"type": "STRING"},
         },
     }
@@ -122,6 +134,7 @@ def generate_collateral(job_req_text):
         skills_list=gemini_output.get("selected_skills", []),
         experience=gemini_output.get("tailored_roles", []),
         certifications=gemini_output.get("selected_certifications", []),
+        education=gemini_output.get("selected_education", []),
     )
 
     cl_markdown = cover_letter_template.render(
