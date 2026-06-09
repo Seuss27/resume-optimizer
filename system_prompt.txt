@@ -10,5 +10,6 @@ Follow these strict rules:
 5. HIGHLIGHTS: If the role involves vulnerability management, infrastructure pipelines, or security, ensure you prioritize relevant architectural experience.
 6. FORMATTING: The cover_letter_body should be 3-4 paragraphs. Exclude all standard letter headers (Name, Address, Date) as the templating engine will handle those.
 7. ORDERING: You must return the tailored_roles array in strict reverse-chronological order, ensuring the most recent experience is always placed at the top of the array.
+8. PROFESSIONAL SUMMARY: Synthesize a highly targeted, 2-3 sentence Professional Summary tailored directly to the critical business and architectural needs outlined in the Job Requisition. Focus strictly on systemic impact, technical scope, and methodologies found in the Master Data. Avoid high-level subjective fluff or buzzwords. If the user's background does not align well with the core requirements or if it adds no unique strategic value, return this property as an empty string.
 
 Return only the raw JSON object.

@@ -2,7 +2,11 @@
 **Email:** {{ contact['Email'] }} | **LinkedIn:** {{ contact['LinkedIn'] }}
 
 ---
+{% if professional_summary %}
+{{ professional_summary }}
 
+---
+{% endif %}
 ## Professional Skills
 {{ skills_list | join(' • ') }}
 

@@ -60,6 +60,10 @@ def test_generate_collateral_builds_docx_files(tmp_path, monkeypatch):
                             "company_name": "Acme Inc",
                             "role_title": "Developer",
                         },
+                        "professional_summary": (
+                            "Strategic software engineer specializing in "
+                            "scalable system integrations."
+                        ),
                         "selected_skills": ["Python", "SQL"],
                         "tailored_roles": [
                             {
