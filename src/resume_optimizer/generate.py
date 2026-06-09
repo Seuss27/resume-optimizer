@@ -8,6 +8,10 @@ from google import genai
 from google.genai import types
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
+from resume_optimizer.logging_setup import get_logger
+
+logger = get_logger(__name__)
+
 __version__ = "0.1.0"
 
 load_dotenv()
@@ -99,7 +103,7 @@ def generate_collateral(job_req_text):
     client = genai.Client(http_options=http_options)
     user_prompt = f"Job Req:\n{job_req_text}\n\nMaster Data:\n{json.dumps(master_data)}"
 
-    print("Initiating Gemini API Call. Extracting meta and filtering history...")
+    logger.info("Initiating Gemini API call.")
 
     response = client.models.generate_content(
         model="gemini-2.5-flash",
@@ -121,7 +125,10 @@ def generate_collateral(job_req_text):
     role = clean_filename(meta.get("role_title", "UnknownRole"))
 
     prefix = f"{company}_{role}"
-    print(f"AI Processing Complete. Building collateral for: {prefix}")
+    logger.info(
+        "AI processing complete.",
+        extra={"output_prefix": prefix},
+    )
 
     # 5. Inject Data into Jinja2 Templates
     env = Environment(loader=FileSystemLoader("."), autoescape=select_autoescape(["html", "xml"]))
@@ -143,13 +150,19 @@ def generate_collateral(job_req_text):
     )
 
     # 6. Compile Final Outputs
-    print(f"Compiling {prefix}_Resume.docx and {prefix}_CoverLetter.docx...")
+    logger.info(
+        "Compiling final documents.",
+        extra={
+            "resume_file": f"{prefix}_Resume.docx",
+            "cover_letter_file": f"{prefix}_CoverLetter.docx",
+        },
+    )
 
     # Ensure Pandoc is installed locally; if not, download it automatically
     try:
         pypandoc.get_pandoc_version()
     except OSError:
-        print("Pandoc engine not found. Downloading it now (this only happens once)...")
+        logger.info("Pandoc engine not found; downloading it now.")
         pypandoc.download_pandoc()
 
     # Temporary markdown files
@@ -166,7 +179,7 @@ def generate_collateral(job_req_text):
     os.remove("temp_resume.md")
     os.remove("temp_cl.md")
 
-    print("Success! Both files have been deployed to your directory.")
+    logger.info("Successfully deployed generated files.")
 
 
 def main():
@@ -184,6 +197,7 @@ def main():
     if req_input.strip():
         generate_collateral(req_input)
     else:
+        logger.info("No input detected; exiting without generating collateral.")
         print("No input detected. Exiting.")
 
 
