@@ -21,3 +21,10 @@
 {% endfor %}
 
 {% endfor %}
+
+{% if certifications and certifications|length > 0 %}
+## Certifications
+{% for cert in certifications %}
+* {{ cert }}
+{% endfor %}
+{% endif %}

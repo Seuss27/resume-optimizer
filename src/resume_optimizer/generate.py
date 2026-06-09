@@ -54,6 +54,11 @@ def generate_collateral(job_req_text):
             },
             "professional_summary": {"type": "STRING"},
             "selected_skills": {"type": "ARRAY", "items": {"type": "STRING"}},
+            "selected_certifications": {
+                "type": "ARRAY",
+                "items": {"type": "STRING"},
+                "description": "Optional. Leave empty if no certifications are relevant.",
+            },
             "tailored_roles": {
                 "type": "ARRAY",
                 "items": {
@@ -116,6 +121,7 @@ def generate_collateral(job_req_text):
         professional_summary=gemini_output.get("professional_summary", ""),
         skills_list=gemini_output.get("selected_skills", []),
         experience=gemini_output.get("tailored_roles", []),
+        certifications=gemini_output.get("selected_certifications", []),
     )
 
     cl_markdown = cover_letter_template.render(
