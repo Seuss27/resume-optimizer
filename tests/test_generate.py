@@ -144,8 +144,7 @@ def test_generate_collateral_performs_optional_ats_validation(tmp_path, monkeypa
                             "missing_keywords": ["Python", "CI/CD"],
                             "formatting_compliance": "Good",
                             "critical_feedback": (
-                                "Add more role-specific metrics and reduce dense "
-                                "language."
+                                "Add more role-specific metrics and reduce dense language."
                             ),
                         }
                     )

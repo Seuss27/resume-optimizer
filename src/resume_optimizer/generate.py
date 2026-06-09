@@ -253,8 +253,7 @@ def generate_collateral(job_req_text, validate=False):
 def parse_args():
     parser = argparse.ArgumentParser(
         description=(
-            "Generate a job-targeted resume and optionally validate it "
-            "against ATS expectations."
+            "Generate a job-targeted resume and optionally validate it against ATS expectations."
         )
     )
     parser.add_argument(
