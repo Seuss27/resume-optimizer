@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+
 from resume_optimizer.logging_setup import get_logger
 
 logger = get_logger(__name__)
@@ -151,7 +152,10 @@ def generate_collateral(job_req_text):
     # 6. Compile Final Outputs
     logger.info(
         "Compiling final documents.",
-        extra={"resume_file": f"{prefix}_Resume.docx", "cover_letter_file": f"{prefix}_CoverLetter.docx"},
+        extra={
+            "resume_file": f"{prefix}_Resume.docx",
+            "cover_letter_file": f"{prefix}_CoverLetter.docx",
+        },
     )
 
     # Ensure Pandoc is installed locally; if not, download it automatically

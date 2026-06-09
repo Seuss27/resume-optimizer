@@ -2,6 +2,7 @@ import json
 import os
 
 import pandas as pd
+
 from resume_optimizer.logging_setup import get_logger
 
 logger = get_logger(__name__)
