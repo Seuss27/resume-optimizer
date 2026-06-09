@@ -14,27 +14,45 @@ When you find a job you want to apply for, the engine:
 
 ## Prerequisites
 
-* **Python 3.8+**
+* **Python 3.10+**
 * **Pandoc** (The script will attempt to automatically download the Pandoc engine if it is not found on your system)
 * **Gemini API Key** (Get one at [Google AI Studio](https://aistudio.google.com/))
 
-## Installation
+## Installation & Setup
 
-1. **Clone the repository:**
-```bash
-   git clone [https://github.com/YOUR_USERNAME/resume-optimizer.git](https://github.com/YOUR_USERNAME/resume-optimizer.git)
+Choose **one** of the following environment options to install and run the workspace.
+
+### Option A: Clean Workspace via Hatch (Recommended)
+This method utilizes [Hatch](https://hatch.pypa.io/) to natively manage virtual runtimes, dependencies, and execution mappings in an isolated system cache without cluttering your local directory.
+
+1. **Install Hatch globally** (via pipx or your global python layer):
+   ```bash
+   pipx install hatch
+   ```
+2. **Clone the repository and enter the workspace:**
+   ```bash
+   git clone [https://github.com/Seuss27/resume-optimizer.git](https://github.com/Seuss27/resume-optimizer.git)
    cd resume-optimizer
    ```
+3. Everything is ready! Hatch will build and hydrate your environment on your first execution script call.
 
-2. **Set up a virtual environment:**
-```bash
+### Option B: Traditional Virtual Environment via Pip
+If you prefer a standard local virtual environment workflow using standard python packaging paths:
+
+1. **Clone the repository and enter the workspace:**
+   ```bash
+   git clone [https://github.com/Seuss27/resume-optimizer.git](https://github.com/Seuss27/resume-optimizer.git)
+   cd resume-optimizer
+   ```
+2. **Set up and activate your virtual environment:**
+   ```bash
    python -m venv .venv
    source .venv/bin/activate  # On Windows use: .venv\Scripts\activate
    ```
-
-3. **Install dependencies:**
-```bash
-   pip install -r requirements.txt
+3. **Install the package and development dependencies in editable mode:**
+   ```bash
+   pip install --upgrade pip
+   pip install -e .[dev]
    ```
 
 ## Configuration & Security
@@ -43,7 +61,7 @@ When you find a job you want to apply for, the engine:
 
 1. **Configure your API Key:**
    Create a file named `.env` in the root directory and add your key:
-```text
+   ```text
    GEMINI_API_KEY="your_actual_api_key_here"
    ```
 
@@ -55,27 +73,56 @@ When you find a job you want to apply for, the engine:
 
 ## Usage
 
-**Step 1: Build your local state**
-Whenever you update your master spreadsheets, run the preprocessor to generate your `master_data.json`:
+Depending on your installation path chosen above, run the preprocessor followed by the core AI engine:
+
+### If Using Hatch (Option A)
 ```bash
-python build_state.py
+# Step 1: Preprocess your CSVs into unified JSON state
+hatch run build-state
+
+# Step 2: Paste the target job requisition text to compile outputs
+hatch run generate
 ```
 
-**Step 2: Generate Collateral**
-Run the core engine and paste the text of the job description when prompted.
-When finished pasting, press `Enter`, then `CTRL+D` (Mac/Linux) or `CTRL+Z` then `Enter` (Windows) to submit:
+### If Using Standard Pip Entry Points (Option B)
 ```bash
-python generate.py
+# Step 1: Preprocess your CSVs into unified JSON state
+build-resume-state
+
+# Step 2: Paste the target job requisition text to compile outputs
+generate-resume
 ```
 
-Check your project directory for your freshly deployed `[Company]_[Role]_Resume.docx` and `[Company]_[Role]_CoverLetter.docx`.
+*When running the generation engine, paste the text of the job description when prompted. When finished pasting, press `Enter`, then `CTRL+D` (Mac/Linux) or `CTRL+Z` then `Enter` (Windows) to submit.*
+
+Check your root project directory for your freshly deployed `[Company]_[Role]_Resume.docx` and `[Company]_[Role]_CoverLetter.docx`.
+
+## Development Commands
+
+For developers validating changes or contributing to the repository, workspace checks are exposed natively via Hatch:
+
+```bash
+hatch run test    # Run unit testing suite via pytest
+hatch run lint    # Validate style and security rules via ruff check
+hatch run format  # Apply automated codebase formatting via ruff format
+```
 
 ## Project Structure
 
-* `generate.py` - The core application engine (API call, data injection, DOCX compilation).
-* `build_state.py` - The data preprocessor (CSV to JSON).
-* `resume_template.md` - Jinja2 layout for the resume.
-* `cover_letter_template.md` - Jinja2 layout for the cover letter.
-* `system_prompt.txt` - The strict instructional persona fed to the Gemini API.
-* `example_profile.csv` & `example_experience.csv` - Dummy data templates to guide your CSV creation.
-* `requirements.txt` - Python dependencies.
+```text
+resume-optimizer/
+├── .github/
+│   ├── dependabot.yml       # Dependency tracking configuration
+│   └── workflows/ci.yml     # Automated multi-environment GitHub Actions pipeline
+├── src/
+│   └── resume_optimizer/
+│       ├── __init__.py      # Package indicator
+│       ├── build_state.py   # Data preprocessor (CSV to JSON)
+│       └── generate.py      # Core AI engine (Gemini API, templates, compilation)
+├── tests/                   # Complete unit test suite
+├── resume_template.md       # Jinja2 layout for the resume
+├── cover_letter_template.md # Jinja2 layout for the cover letter
+├── system_prompt.txt        # Recruiter instructional alignment token fed to Gemini
+├── pyproject.toml           # Declarative tool settings, dependencies, and metadata
+└── .pre-commit-config.yaml  # Local Git compliance commit hook mapping
+```
