@@ -8,7 +8,7 @@ import pytest
 # Ensure the GEMINI_API_KEY check in generate.py passes during import.
 os.environ.setdefault("GEMINI_API_KEY", "test-key")
 
-import generate
+import src.resume_optimizer.generate as generate
 
 
 def test_clean_filename_normalizes_text():

@@ -32,6 +32,11 @@ dev = [
     "ruff",
 ]
 
+# Define clean CLI entry points mapping directly to your functions
+[project.scripts]
+generate-resume = "resume_optimizer.generate:main" 
+build-resume-state = "resume_optimizer.build_state:main"
+
 [tool.ruff]
 # Target your minimum supported Python version
 target-version = "py310"
@@ -63,13 +68,17 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 
 [tool.hatch.version]
-path = "generate.py"
+path = "src/resume_optimizer/generate.py"
 
 [tool.hatch.envs.default]
 dependencies = [
   "pytest",
   "ruff",
 ]
+
 [tool.hatch.envs.default.scripts]
 test = "pytest {args:tests}"
-lint = "ruff check . && ruff format --check ."
+lint = "ruff check {args:.}"
+format = "ruff format {args:.}"
+build-state = "build-resume-state" # Calls the package entry point directly
+generate = "generate-resume"       # Calls the package entry point directly

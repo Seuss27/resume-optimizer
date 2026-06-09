@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from build_state import convert_sheets_to_master_data, load_profile
+from src.resume_optimizer.build_state import convert_sheets_to_master_data, load_profile
 
 
 def test_load_profile_reads_csv(tmp_path):

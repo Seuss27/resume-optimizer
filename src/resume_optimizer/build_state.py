@@ -85,6 +85,9 @@ def convert_sheets_to_master_data(
     print(f"Successfully built {output_json_path} from spreadsheets!")
 
 
-if __name__ == "__main__":
+def main():
     # Ensure you have downloaded your two tabs as 'experience.csv' and 'profile.csv'
     convert_sheets_to_master_data("experience.csv", "profile.csv")
+
+if __name__ == "__main__":
+    main()

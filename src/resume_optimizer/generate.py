@@ -151,7 +151,7 @@ def generate_collateral(job_req_text):
     print("Success! Both files have been deployed to your directory.")
 
 
-if __name__ == "__main__":
+def main():
     print("--- The JIT Resume Engine ---")
     print("Paste the target Job Requisition below.")
     print(
@@ -166,3 +166,6 @@ if __name__ == "__main__":
         generate_collateral(req_input)
     else:
         print("No input detected. Exiting.")
+
+if __name__ == "__main__":
+    main()
