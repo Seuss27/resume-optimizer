@@ -1,9 +1,8 @@
 import json
-from pathlib import Path
 
 import pytest
 
-from src.resume_optimizer.build_state import convert_sheets_to_master_data, load_profile
+from resume_optimizer.build_state import convert_sheets_to_master_data, load_profile
 
 
 def test_load_profile_reads_csv(tmp_path):
@@ -27,13 +26,13 @@ def test_convert_sheets_to_master_data_writes_expected_json(tmp_path):
 
     profile_path.write_text("Key,Value\nfirst_name,Sher\nlast_name,Bones\n")
     experience_path.write_text(
-        "Company,Role Title,Years Active,Action Verb,Core Achievement / Responsibility,Measurable Metric / Impact,Keywords / Tech Stack\n"
+        "Company,Role Title,Years Active,Action Verb,"
+        "Core Achievement / Responsibility,Measurable Metric / Impact,"
+        "Keywords / Tech Stack\n"
         'Acme,Engineer,2020-2024,Designed,services,improved 20%,"Python, SQL"\n'
     )
 
-    convert_sheets_to_master_data(
-        str(experience_path), str(profile_path), str(output_path)
-    )
+    convert_sheets_to_master_data(str(experience_path), str(profile_path), str(output_path))
 
     result = json.loads(output_path.read_text())
 
@@ -42,9 +41,7 @@ def test_convert_sheets_to_master_data_writes_expected_json(tmp_path):
     assert result["roles"][0]["company"] == "Acme"
     assert result["roles"][0]["title"] == "Engineer"
     assert result["roles"][0]["dates"] == "2020-2024"
-    assert result["roles"][0]["master_bullets"] == [
-        "Designed services Impact: improved 20%"
-    ]
+    assert result["roles"][0]["master_bullets"] == ["Designed services Impact: improved 20%"]
 
 
 def test_convert_sheets_to_master_data_handles_missing_metric_and_skills(tmp_path):
@@ -54,13 +51,12 @@ def test_convert_sheets_to_master_data_handles_missing_metric_and_skills(tmp_pat
 
     profile_path.write_text("Key,Value\nname,Jordan\n")
     experience_path.write_text(
-        "Company,Role Title,Years Active,Action Verb,Core Achievement / Responsibility,Measurable Metric / Impact\n"
+        "Company,Role Title,Years Active,Action Verb,"
+        "Core Achievement / Responsibility,Measurable Metric / Impact\n"
         "Acme,Engineer,2020-2024,Implemented,feature,\n"
     )
 
-    convert_sheets_to_master_data(
-        str(experience_path), str(profile_path), str(output_path)
-    )
+    convert_sheets_to_master_data(str(experience_path), str(profile_path), str(output_path))
 
     result = json.loads(output_path.read_text())
 

@@ -1,11 +1,12 @@
 import json
 import os
 import re
+
 import pypandoc
-from jinja2 import Environment, FileSystemLoader, select_autoescape
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 __version__ = "0.1.0"
 
@@ -29,9 +30,7 @@ def clean_filename(text):
 def generate_collateral(job_req_text):
     # 1. Load Local State
     if not os.path.exists("master_data.json"):
-        raise FileNotFoundError(
-            "master_data.json is missing. Run the preprocessor script first."
-        )
+        raise FileNotFoundError("master_data.json is missing. Run the preprocessor script first.")
 
     with open("master_data.json", "r") as f:
         master_data = json.load(f)
@@ -107,9 +106,7 @@ def generate_collateral(job_req_text):
     print(f"AI Processing Complete. Building collateral for: {prefix}")
 
     # 5. Inject Data into Jinja2 Templates
-    env = Environment(
-        loader=FileSystemLoader("."), autoescape=select_autoescape(["html", "xml"])
-    )
+    env = Environment(loader=FileSystemLoader("."), autoescape=select_autoescape(["html", "xml"]))
     resume_template = env.get_template("resume_template.md")
     cover_letter_template = env.get_template("cover_letter_template.md")
 
@@ -155,7 +152,8 @@ def main():
     print("--- The JIT Resume Engine ---")
     print("Paste the target Job Requisition below.")
     print(
-        "When finished, press Enter, then CTRL+D (Mac/Linux) or CTRL+Z then Enter (Windows) to submit:\n"
+        "When finished, press Enter, then CTRL+D (Mac/Linux) "
+        "or CTRL+Z then Enter (Windows) to submit:\n"
     )
 
     import sys
@@ -166,6 +164,7 @@ def main():
         generate_collateral(req_input)
     else:
         print("No input detected. Exiting.")
+
 
 if __name__ == "__main__":
     main()
