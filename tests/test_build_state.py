@@ -27,7 +27,7 @@ def test_convert_sheets_to_master_data_writes_expected_json(tmp_path):
 
     profile_path.write_text("Key,Value\nfirst_name,Sher\nlast_name,Bones\n")
     experience_path.write_text(
-        'Company,Role Title,Years Active,Action Verb,Core Achievement / Responsibility,Measurable Metric / Impact,Keywords / Tech Stack\n'
+        "Company,Role Title,Years Active,Action Verb,Core Achievement / Responsibility,Measurable Metric / Impact,Keywords / Tech Stack\n"
         'Acme,Engineer,2020-2024,Designed,services,improved 20%,"Python, SQL"\n'
     )
 
@@ -42,7 +42,9 @@ def test_convert_sheets_to_master_data_writes_expected_json(tmp_path):
     assert result["roles"][0]["company"] == "Acme"
     assert result["roles"][0]["title"] == "Engineer"
     assert result["roles"][0]["dates"] == "2020-2024"
-    assert result["roles"][0]["master_bullets"] == ["Designed services Impact: improved 20%"]
+    assert result["roles"][0]["master_bullets"] == [
+        "Designed services Impact: improved 20%"
+    ]
 
 
 def test_convert_sheets_to_master_data_handles_missing_metric_and_skills(tmp_path):
@@ -71,4 +73,6 @@ def test_convert_sheets_to_master_data_missing_experience_file_raises(tmp_path):
     profile_path.write_text("Key,Value\nname,Jordan\n")
 
     with pytest.raises(FileNotFoundError, match="Could not find"):
-        convert_sheets_to_master_data("missing_experience.csv", str(profile_path), str(tmp_path / "out.json"))
+        convert_sheets_to_master_data(
+            "missing_experience.csv", str(profile_path), str(tmp_path / "out.json")
+        )
