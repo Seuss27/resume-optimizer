@@ -2,6 +2,9 @@ import json
 import os
 
 import pandas as pd
+from resume_optimizer.logging_setup import get_logger
+
+logger = get_logger(__name__)
 
 
 def load_profile(profile_csv_path):
@@ -108,8 +111,10 @@ def convert_sheets_to_master_data(
                     cert_string += f" ({year})"
                 master_data["certifications"].append(cert_string)
     elif certs_csv_path == "certifications.csv":
-        # Warn the user in the console, but allow the pipeline to proceed safely
-        print(f"WARNING: '{certs_csv_path}' not found. Building state without certifications.")
+        logger.warning(
+            "Default certifications file not found; building state without certifications.",
+            extra={"certs_csv_path": certs_csv_path},
+        )
     else:
         raise FileNotFoundError(f"Could not find {certs_csv_path}. Please ensure it exists.")
 
@@ -129,8 +134,10 @@ def convert_sheets_to_master_data(
                 }
                 master_data["education"].append(edu_entry)
     elif education_csv_path == "education.csv":
-        # Warn the user in the console, but allow the pipeline to proceed safely
-        print(f"WARNING: '{education_csv_path}' not found. Building state without education.")
+        logger.warning(
+            "Default education file not found; building state without education.",
+            extra={"education_csv_path": education_csv_path},
+        )
     else:
         raise FileNotFoundError(f"Could not find {education_csv_path}. Please ensure it exists.")
 
@@ -138,7 +145,10 @@ def convert_sheets_to_master_data(
     with open(output_json_path, "w") as f:
         json.dump(master_data, f, indent=4)
 
-    print(f"Successfully built {output_json_path} from spreadsheets!")
+    logger.info(
+        "Successfully built master data from spreadsheets.",
+        extra={"output_json_path": output_json_path},
+    )
 
 
 def main():
