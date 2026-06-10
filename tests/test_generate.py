@@ -64,6 +64,7 @@ def test_generate_collateral_markdown_structure_is_valid(tmp_path, monkeypatch):
         "{% for bullet in role.bullets %}"
         "* {{ bullet }}\n"
         "{% endfor %}"
+        "{% endfor %}"
         "{% endfor %}",
         encoding="utf-8",
     )
