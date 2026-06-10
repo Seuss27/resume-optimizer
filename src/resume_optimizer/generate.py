@@ -95,7 +95,7 @@ def print_ats_validation_summary(ats_results):
     print(json.dumps(ats_results, indent=2))
 
 
-def generate_collateral(job_req_text, validate=False):
+def generate_collateral(job_req_text, validate=False, preserve_markdown=False):
     # 1. Load Local State
     if not os.path.exists("master_data.json"):
         raise FileNotFoundError("master_data.json is missing. Run the preprocessor script first.")
@@ -240,12 +240,23 @@ def generate_collateral(job_req_text, validate=False):
         f.write(cl_markdown)
 
     # Convert to DOCX
-    pypandoc.convert_file("temp_resume.md", "docx", outputfile=f"{prefix}_Resume.docx")
+    pypandoc.convert_file(
+        "temp_resume.md",
+        "docx",
+        outputfile=f"{prefix}_Resume.docx",
+        extra_args=["--reference-doc=resume_reference.docx"],
+    )
     pypandoc.convert_file("temp_cl.md", "docx", outputfile=f"{prefix}_CoverLetter.docx")
 
     # Clean up the temporary markdown files so your folder stays clean
-    os.remove("temp_resume.md")
-    os.remove("temp_cl.md")
+    if not preserve_markdown:
+        os.remove("temp_resume.md")
+        os.remove("temp_cl.md")
+    else:
+        logger.info(
+            "Preserving markdown files for template tuning.",
+            extra={"resume_md": "temp_resume.md", "cover_letter_md": "temp_cl.md"},
+        )
 
     logger.info("Successfully deployed generated files.")
 
@@ -262,6 +273,14 @@ def parse_args():
         help=(
             "Run a second Gemini review pass to score the generated resume "
             "against the job requisition."
+        ),
+    )
+    parser.add_argument(
+        "--preserve-markdown",
+        action="store_true",
+        help=(
+            "Keep temp_resume.md and temp_cl.md files for template tuning and "
+            "review instead of deleting them after DOCX conversion."
         ),
     )
     return parser.parse_args()
@@ -282,7 +301,11 @@ def main():
     req_input = sys.stdin.read()
 
     if req_input.strip():
-        generate_collateral(req_input, validate=args.validate)
+        generate_collateral(
+            req_input,
+            validate=args.validate,
+            preserve_markdown=args.preserve_markdown,
+        )
     else:
         logger.info("No input detected; exiting without generating collateral.")
         print("No input detected. Exiting.")

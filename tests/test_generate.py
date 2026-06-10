@@ -32,6 +32,149 @@ def test_parse_args_enables_validation_flag(monkeypatch):
     assert args.validate is True
 
 
+def test_parse_args_enables_preserve_markdown_flag(monkeypatch):
+    monkeypatch.setattr(sys, "argv", ["generate-resume", "--preserve-markdown"])
+    args = generate.parse_args()
+
+    assert args.preserve_markdown is True
+
+
+def test_parse_args_defaults_preserve_markdown_to_false(monkeypatch):
+    monkeypatch.setattr(sys, "argv", ["generate-resume"])
+    args = generate.parse_args()
+
+    assert args.preserve_markdown is False
+
+
+def test_generate_collateral_markdown_structure_is_valid(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "master_data.json").write_text(
+        json.dumps({"contact": {"name": "Alex"}}), encoding="utf-8"
+    )
+    (tmp_path / "system_prompt.txt").write_text("system prompt", encoding="utf-8")
+    (tmp_path / "resume_template.md").write_text(
+        "Resume for {{ contact.name }}\n"
+        "## Professional Skills\n"
+        "{{ skills_list | join(' • ') }}\n"
+        "## Professional Experience\n"
+        "{% for role in experience %}"
+        "### {{ role.title }} | {{ role.company }}\n"
+        "*{{ role.dates }}*\n"
+        "{% for bullet in role.bullets %}"
+        "* {{ bullet }}\n"
+        "{% endfor %}"
+        "{% endfor %}",
+        encoding="utf-8",
+    )
+    (tmp_path / "cover_letter_template.md").write_text(
+        "Dear Hiring,\n{{ cover_letter_body }}", encoding="utf-8"
+    )
+
+    captured_markdown = {}
+
+    def mock_convert_file(input_file, fmt, outputfile, **kwargs):
+        with open(input_file, "r", encoding="utf-8") as f:
+            if "resume" in input_file.lower():
+                captured_markdown["resume"] = f.read()
+            else:
+                captured_markdown["cover_letter"] = f.read()
+        Path(outputfile).write_text("fake docx")
+
+    class FakeResponse:
+        def __init__(self, text):
+            self.text = text
+
+    class FakeModels:
+        def generate_content(self, model, contents, config):
+            return FakeResponse(
+                json.dumps(
+                    {
+                        "job_metadata": {
+                            "company_name": "Acme Inc",
+                            "role_title": "Developer",
+                        },
+                        "professional_summary": "Strategic engineer",
+                        "selected_skills": ["Python", "SQL"],
+                        "tailored_roles": [
+                            {
+                                "title": "Developer",
+                                "company": "Acme Inc",
+                                "dates": "2020-2024",
+                                "bullets": ["Built features.", "Led team."],
+                            }
+                        ],
+                        "cover_letter_body": "I am interested in this role.",
+                    }
+                )
+            )
+
+    class FakeClient:
+        def __init__(self, http_options=None):
+            self.models = FakeModels()
+
+    monkeypatch.setattr(generate, "genai", type("DummyGenai", (), {"Client": FakeClient}))
+    monkeypatch.setattr(generate.pypandoc, "get_pandoc_version", lambda: "2.0")
+    monkeypatch.setattr(generate.pypandoc, "convert_file", mock_convert_file)
+
+    generate.generate_collateral("Target job requisition")
+
+    resume_md = captured_markdown["resume"]
+    cover_letter_md = captured_markdown["cover_letter"]
+
+    assert "## Professional Skills" in resume_md
+    assert "## Professional Experience" in resume_md
+    assert "Python • SQL" in resume_md
+    assert "### Developer | Acme Inc" in resume_md
+    assert "*2020-2024*" in resume_md
+    assert "* Built features." in resume_md
+    assert "* Led team." in resume_md
+    assert "Dear Hiring," in cover_letter_md
+    assert "I am interested in this role." in cover_letter_md
+
+
+def test_generate_collateral_preserve_markdown_keeps_temp_files(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "master_data.json").write_text(json.dumps({"contact": {"name": "Alex"}}))
+    (tmp_path / "system_prompt.txt").write_text("system prompt")
+    (tmp_path / "resume_template.md").write_text("Resume")
+    (tmp_path / "cover_letter_template.md").write_text("Cover letter")
+
+    class FakeResponse:
+        def __init__(self, text):
+            self.text = text
+
+    class FakeModels:
+        def generate_content(self, model, contents, config):
+            return FakeResponse(
+                json.dumps(
+                    {
+                        "job_metadata": {"company_name": "Acme", "role_title": "Dev"},
+                        "selected_skills": [],
+                        "tailored_roles": [],
+                        "cover_letter_body": "Hello",
+                    }
+                )
+            )
+
+    class FakeClient:
+        def __init__(self, http_options=None):
+            self.models = FakeModels()
+
+    monkeypatch.setattr(generate, "genai", type("DummyGenai", (), {"Client": FakeClient}))
+    monkeypatch.setattr(generate.pypandoc, "get_pandoc_version", lambda: "2.0")
+    monkeypatch.setattr(
+        generate.pypandoc,
+        "convert_file",
+        lambda input_file, fmt, outputfile, **kwargs: Path(outputfile).write_text("fake"),
+    )
+
+    generate.generate_collateral("Job req", preserve_markdown=True)
+
+    assert (tmp_path / "temp_resume.md").exists()
+    assert (tmp_path / "temp_cl.md").exists()
+    assert (tmp_path / "Acme_Dev_Resume.docx").exists()
+
+
 def test_validate_resume_requests_ats_prompt_and_returns_json(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "ats_prompt.txt").write_text("ATS parser prompt")
@@ -161,7 +304,7 @@ def test_generate_collateral_builds_docx_files(tmp_path, monkeypatch):
     monkeypatch.setattr(generate, "genai", type("DummyGenai", (), {"Client": FakeClient}))
     monkeypatch.setattr(generate.pypandoc, "get_pandoc_version", lambda: "2.0")
 
-    def fake_convert_file(input_file, fmt, outputfile):
+    def fake_convert_file(input_file, fmt, outputfile, **kwargs):
         Path(outputfile).write_text("fake docx content")
 
     monkeypatch.setattr(generate.pypandoc, "convert_file", fake_convert_file)
@@ -245,7 +388,9 @@ def test_generate_collateral_performs_optional_ats_validation(tmp_path, monkeypa
     monkeypatch.setattr(
         generate.pypandoc,
         "convert_file",
-        lambda input_file, fmt, outputfile: Path(outputfile).write_text("fake docx content"),
+        lambda input_file, fmt, outputfile, **kwargs: Path(outputfile).write_text(
+            "fake docx content"
+        ),
     )
 
     generate.generate_collateral("Target job requisition", validate=True)
@@ -299,7 +444,7 @@ def test_generate_collateral_skips_ats_validation_when_flag_not_set(tmp_path, mo
     monkeypatch.setattr(
         generate.pypandoc,
         "convert_file",
-        lambda input_file, fmt, outputfile: Path(outputfile).write_text("fake docx"),
+        lambda input_file, fmt, outputfile, **kwargs: Path(outputfile).write_text("fake docx"),
     )
 
     generate.generate_collateral("Target job requisition")
@@ -343,7 +488,7 @@ def test_generate_collateral_uses_unknown_prefix_when_metadata_is_missing(tmp_pa
     monkeypatch.setattr(
         generate.pypandoc,
         "convert_file",
-        lambda input_file, fmt, outputfile: Path(outputfile).write_text("fake docx"),
+        lambda input_file, fmt, outputfile, **kwargs: Path(outputfile).write_text("fake docx"),
     )
 
     generate.generate_collateral("Target job requisition")
