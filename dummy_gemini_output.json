@@ -1,0 +1,40 @@
+{
+  "job_metadata": {
+    "company_name": "TestCorp",
+    "role_title": "Senior Solutions Architect"
+  },
+  "professional_summary": "A highly targeted, dummy professional summary designed to take up exactly two or three lines of text. This helps validate that paragraph spacing, line height, and margins are behaving correctly in the final Microsoft Word document.",
+  "selected_skills": ["Python", "AWS", "Terraform", "CI/CD", "Jinja2", "Pandoc", "Docker", "Kubernetes"],
+  "selected_certifications": [
+    "AWS Certified Solutions Architect - Professional | Amazon Web Services (2023)"
+  ],
+  "tailored_roles": [
+    {
+      "title": "Senior Cloud Architect",
+      "company": "Acme Corp",
+      "dates": "2020 - Present",
+      "bullets": [
+        "Architected scalable cloud infrastructure using Terraform, reducing deployment time by 40%.",
+        "Migrated legacy monolith to microservices architecture, resulting in 99.99% uptime.",
+        "This is a longer bullet point to test how Microsoft Word handles text wrapping when a single achievement spans multiple lines in the generated document."
+      ]
+    },
+    {
+      "title": "Systems Engineer",
+      "company": "Globex Inc",
+      "dates": "2015 - 2020",
+      "bullets": [
+        "Automated routine server maintenance tasks with Bash scripts, saving 15 hours per week.",
+        "Implemented containerized CI/CD pipelines using Docker and Jenkins."
+      ]
+    }
+  ],
+  "selected_education": [
+    {
+      "degree": "Bachelor of Science in Computer Science",
+      "institution": "University of California",
+      "year": "2015"
+    }
+  ],
+  "cover_letter_body": "This is a dummy paragraph for the cover letter.\n\nIt contains multiple lines to test spacing between paragraphs. Thank you for taking the time to review this application."
+}

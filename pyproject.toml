@@ -82,3 +82,4 @@ lint = "ruff check {args:.}"
 format = "ruff format {args:.}"
 build-state = "build-resume-state" # Calls the package entry point directly
 generate = "generate-resume"       # Calls the package entry point directly
+tune = "python tune_template.py {args}"
