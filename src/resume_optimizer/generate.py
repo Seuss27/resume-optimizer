@@ -194,15 +194,28 @@ def generate_collateral(job_req_text, validate=False, preserve_markdown=False, e
                 "items": {"type": "STRING"},
                 "description": "Optional. Leave empty if no certifications are relevant.",
             },
-            "tailored_roles": {
+            # In generate_collateral() response_schema definition:
+            "tailored_companies": {
                 "type": "ARRAY",
                 "items": {
                     "type": "OBJECT",
                     "properties": {
-                        "title": {"type": "STRING"},
                         "company": {"type": "STRING"},
-                        "dates": {"type": "STRING"},
-                        "bullets": {"type": "ARRAY", "items": {"type": "STRING"}},
+                        "dates": {
+                            "type": "STRING",
+                            "description": "The full date range worked at this company.",
+                        },
+                        "roles": {
+                            "type": "ARRAY",
+                            "items": {
+                                "type": "OBJECT",
+                                "properties": {
+                                    "title": {"type": "STRING"},
+                                    "dates": {"type": "STRING"},
+                                    "bullets": {"type": "ARRAY", "items": {"type": "STRING"}},
+                                },
+                            },
+                        },
                     },
                 },
             },
@@ -270,7 +283,7 @@ def generate_collateral(job_req_text, validate=False, preserve_markdown=False, e
         contact=master_data.get("contact", {}),
         professional_summary=gemini_output.get("professional_summary", ""),
         skills_list=gemini_output.get("selected_skills", []),
-        experience=gemini_output.get("tailored_roles", []),
+        experience=gemini_output.get("tailored_companies", []),
         certifications=gemini_output.get("selected_certifications", []),
         education=gemini_output.get("selected_education", []),
     )

@@ -32,7 +32,7 @@ def tune_formatting():
         contact=master_data.get("contact", {}),
         professional_summary=gemini_output.get("professional_summary", ""),
         skills_list=gemini_output.get("selected_skills", []),
-        experience=gemini_output.get("tailored_roles", []),
+        experience=gemini_output.get("tailored_companies", []),
         certifications=gemini_output.get("selected_certifications", []),
         education=gemini_output.get("selected_education", []),
     )

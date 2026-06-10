@@ -63,7 +63,7 @@ def test_convert_sheets_to_master_data_handles_missing_metric_and_skills(tmp_pat
     result = json.loads(output_path.read_text())
 
     assert result["all_skills"] == []
-    assert result["roles"][0]["master_bullets"] == ["Implemented feature"]
+    assert result["companies"][0]["roles"][0]["master_bullets"] == ["Implemented feature"]
 
 
 def test_convert_sheets_to_master_data_missing_experience_file_raises(tmp_path):

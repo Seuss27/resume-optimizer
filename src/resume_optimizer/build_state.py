@@ -50,7 +50,7 @@ def convert_sheets_to_master_data(
     master_data = {
         "contact": user_profile,
         "all_skills": [],
-        "roles": [],
+        "companies": [],
         "certifications": [],
         "education": [],
     }
@@ -67,12 +67,12 @@ def convert_sheets_to_master_data(
     if "Years Active" not in df_experience.columns:
         df_experience["Years Active"] = ""
 
+    companies_dict = {}
     grouped = df_experience.groupby(["Company", "Role Title", "Years Active"], sort=False)
 
     for (company, title, dates), group in grouped:
         role_entry = {
             "title": title,
-            "company": company,
             "dates": dates,
             "master_bullets": [],
         }
@@ -94,7 +94,11 @@ def convert_sheets_to_master_data(
             if bullet:
                 role_entry["master_bullets"].append(bullet)
 
-        master_data["roles"].append(role_entry)
+        if company not in companies_dict:
+            companies_dict[company] = {"company": company, "roles": []}
+        companies_dict[company]["roles"].append(role_entry)
+
+    master_data["companies"] = list(companies_dict.values())
 
     # 7. Extract Certifications (Graceful Warning Fallback)
     if os.path.exists(certs_csv_path):

@@ -12,14 +12,16 @@
 
 ## Professional Experience
 
-{% for role in experience %}
-### {{ role.title }} | {{ role.company }}
-*{{ role.dates }}*
+{% for co in experience %}
+### {{ co.company }} | {{ co.dates }}
 
+{% for role in co.roles %}
+**{{ role.title }}** | *{{ role.dates }}*
 {% for bullet in role.bullets %}
 * {{ bullet }}
 {% endfor %}
 
+{% endfor %}
 {% endfor %}
 
 {% if certifications and certifications|length > 0 %}

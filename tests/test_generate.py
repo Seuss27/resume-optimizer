@@ -57,9 +57,10 @@ def test_generate_collateral_markdown_structure_is_valid(tmp_path, monkeypatch):
         "## Professional Skills\n"
         "{{ skills_list | join(' • ') }}\n"
         "## Professional Experience\n"
-        "{% for role in experience %}"
-        "### {{ role.title }} | {{ role.company }}\n"
-        "*{{ role.dates }}*\n"
+        "{% for co in experience %}"
+        "### {{ co.company }} | {{ co.dates }}\n"
+        "{% for role in co.roles %}"
+        "**{{ role.title }}** | *{{ role.dates }}*\n"
         "{% for bullet in role.bullets %}"
         "* {{ bullet }}\n"
         "{% endfor %}"
@@ -95,12 +96,17 @@ def test_generate_collateral_markdown_structure_is_valid(tmp_path, monkeypatch):
                         },
                         "professional_summary": "Strategic engineer",
                         "selected_skills": ["Python", "SQL"],
-                        "tailored_roles": [
+                        "tailored_companies": [
                             {
-                                "title": "Developer",
                                 "company": "Acme Inc",
                                 "dates": "2020-2024",
-                                "bullets": ["Built features.", "Led team."],
+                                "roles": [
+                                    {
+                                        "title": "Developer",
+                                        "dates": "2020-2024",
+                                        "bullets": ["Built features.", "Led team."],
+                                    }
+                                ],
                             }
                         ],
                         "cover_letter_body": "I am interested in this role.",
@@ -124,8 +130,8 @@ def test_generate_collateral_markdown_structure_is_valid(tmp_path, monkeypatch):
     assert "## Professional Skills" in resume_md
     assert "## Professional Experience" in resume_md
     assert "Python • SQL" in resume_md
-    assert "### Developer | Acme Inc" in resume_md
-    assert "*2020-2024*" in resume_md
+    assert "### Acme Inc | 2020-2024" in resume_md
+    assert "**Developer** | *2020-2024*" in resume_md
     assert "* Built features." in resume_md
     assert "* Led team." in resume_md
     assert "Dear Hiring," in cover_letter_md
@@ -150,7 +156,7 @@ def test_generate_collateral_preserve_markdown_keeps_temp_files(tmp_path, monkey
                     {
                         "job_metadata": {"company_name": "Acme", "role_title": "Dev"},
                         "selected_skills": [],
-                        "tailored_roles": [],
+                        "tailored_companies": [],
                         "cover_letter_body": "Hello",
                     }
                 )
@@ -284,12 +290,17 @@ def test_generate_collateral_builds_docx_files(tmp_path, monkeypatch):
                             "scalable system integrations."
                         ),
                         "selected_skills": ["Python", "SQL"],
-                        "tailored_roles": [
+                        "tailored_companies": [
                             {
-                                "title": "Developer",
                                 "company": "Acme Inc",
                                 "dates": "2020-2024",
-                                "bullets": ["Built features."],
+                                "roles": [
+                                    {
+                                        "title": "Developer",
+                                        "dates": "2020-2024",
+                                        "bullets": ["Built features."],
+                                    }
+                                ],
                             }
                         ],
                         "cover_letter_body": "Hello from Acme",
@@ -366,12 +377,17 @@ def test_generate_collateral_performs_optional_ats_validation(tmp_path, monkeypa
                             "scalable system integrations."
                         ),
                         "selected_skills": ["Python", "SQL"],
-                        "tailored_roles": [
+                        "tailored_companies": [
                             {
-                                "title": "Developer",
                                 "company": "Acme Inc",
                                 "dates": "2020-2024",
-                                "bullets": ["Built features."],
+                                "roles": [
+                                    {
+                                        "title": "Developer",
+                                        "dates": "2020-2024",
+                                        "bullets": ["Built features."],
+                                    }
+                                ],
                             }
                         ],
                         "cover_letter_body": "Hello from Acme",
@@ -428,7 +444,7 @@ def test_generate_collateral_skips_ats_validation_when_flag_not_set(tmp_path, mo
                             "role_title": "Developer",
                         },
                         "selected_skills": [],
-                        "tailored_roles": [],
+                        "tailored_companies": [],
                         "cover_letter_body": "Hello",
                     }
                 )
@@ -473,7 +489,7 @@ def test_generate_collateral_uses_unknown_prefix_when_metadata_is_missing(tmp_pa
                 json.dumps(
                     {
                         "selected_skills": [],
-                        "tailored_roles": [],
+                        "tailored_companies": [],
                         "cover_letter_body": "Hello",
                     }
                 )
