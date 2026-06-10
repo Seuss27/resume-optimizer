@@ -103,6 +103,11 @@ def generate_collateral(job_req_text, validate=False, preserve_markdown=False):
     with open("master_data.json", "r") as f:
         master_data = json.load(f)
 
+    # DYNAMIC INITIALS DERIVATION
+    contact_info = master_data.get("contact", {})
+    full_name = contact_info.get("Name") or contact_info.get("name") or "User"
+    initials = "".join([part[0].upper() for part in full_name.split() if part])
+
     if not os.path.exists("system_prompt.txt"):
         raise FileNotFoundError("system_prompt.txt is missing.")
 
@@ -218,7 +223,7 @@ def generate_collateral(job_req_text, validate=False, preserve_markdown=False):
         print_ats_validation_summary(ats_results)
 
         # Build the filename matching your resume/cover letter naming convention
-        ats_filename = f"{prefix}_ats.txt"
+        ats_filename = f"{prefix}_ats_{initials}.txt"
 
         # Save the formatted validation results to the text file
         with open(ats_filename, "w", encoding="utf-8") as f:
@@ -245,8 +250,8 @@ def generate_collateral(job_req_text, validate=False, preserve_markdown=False):
     logger.info(
         "Compiling final documents.",
         extra={
-            "resume_file": f"{prefix}_Resume.docx",
-            "cover_letter_file": f"{prefix}_CoverLetter.docx",
+            "resume_file": f"{prefix}_Resume_{initials}.docx",
+            "cover_letter_file": f"{prefix}_CoverLetter_{initials}.docx",
         },
     )
 
@@ -267,10 +272,10 @@ def generate_collateral(job_req_text, validate=False, preserve_markdown=False):
     pypandoc.convert_file(
         "temp_resume.md",
         "docx",
-        outputfile=f"{prefix}_Resume.docx",
+        outputfile=f"{prefix}_Resume_{initials}.docx",
         extra_args=["--reference-doc=resume_reference.docx"],
     )
-    pypandoc.convert_file("temp_cl.md", "docx", outputfile=f"{prefix}_CoverLetter.docx")
+    pypandoc.convert_file("temp_cl.md", "docx", outputfile=f"{prefix}_CoverLetter_{initials}.docx")
 
     # Clean up the temporary markdown files so your folder stays clean
     if not preserve_markdown:

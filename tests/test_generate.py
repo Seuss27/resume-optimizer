@@ -172,7 +172,7 @@ def test_generate_collateral_preserve_markdown_keeps_temp_files(tmp_path, monkey
 
     assert (tmp_path / "temp_resume.md").exists()
     assert (tmp_path / "temp_cl.md").exists()
-    assert (tmp_path / "Acme_Dev_Resume.docx").exists()
+    assert (tmp_path / "Acme_Dev_Resume_A.docx").exists()
 
 
 def test_validate_resume_requests_ats_prompt_and_returns_json(tmp_path, monkeypatch):
@@ -311,8 +311,8 @@ def test_generate_collateral_builds_docx_files(tmp_path, monkeypatch):
 
     generate.generate_collateral("Target job requisition")
 
-    resume_output = tmp_path / "Acme_Inc_Developer_Resume.docx"
-    cover_output = tmp_path / "Acme_Inc_Developer_CoverLetter.docx"
+    resume_output = tmp_path / "Acme_Inc_Developer_Resume_A.docx"
+    cover_output = tmp_path / "Acme_Inc_Developer_CoverLetter_A.docx"
 
     assert resume_output.exists()
     assert cover_output.exists()
@@ -449,8 +449,8 @@ def test_generate_collateral_skips_ats_validation_when_flag_not_set(tmp_path, mo
 
     generate.generate_collateral("Target job requisition")
 
-    assert (tmp_path / "Acme_Inc_Developer_Resume.docx").exists()
-    assert (tmp_path / "Acme_Inc_Developer_CoverLetter.docx").exists()
+    assert (tmp_path / "Acme_Inc_Developer_Resume_A.docx").exists()
+    assert (tmp_path / "Acme_Inc_Developer_CoverLetter_A.docx").exists()
 
 
 def test_generate_collateral_uses_unknown_prefix_when_metadata_is_missing(tmp_path, monkeypatch):
@@ -493,5 +493,5 @@ def test_generate_collateral_uses_unknown_prefix_when_metadata_is_missing(tmp_pa
 
     generate.generate_collateral("Target job requisition")
 
-    assert (tmp_path / "UnknownCompany_UnknownRole_Resume.docx").exists()
-    assert (tmp_path / "UnknownCompany_UnknownRole_CoverLetter.docx").exists()
+    assert (tmp_path / "UnknownCompany_UnknownRole_Resume_A.docx").exists()
+    assert (tmp_path / "UnknownCompany_UnknownRole_CoverLetter_A.docx").exists()
