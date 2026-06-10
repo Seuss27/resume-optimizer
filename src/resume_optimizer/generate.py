@@ -219,7 +219,7 @@ def generate_collateral(job_req_text, validate=False, preserve_markdown=False):
 
         # Build the filename matching your resume/cover letter naming convention
         ats_filename = f"{prefix}_ats.txt"
-        
+
         # Save the formatted validation results to the text file
         with open(ats_filename, "w", encoding="utf-8") as f:
             f.write("=== ATS Validation Results ===\n")
@@ -239,10 +239,7 @@ def generate_collateral(job_req_text, validate=False, preserve_markdown=False):
             f.write(json.dumps(ats_results, indent=2))
             f.write("\n")
 
-        logger.info(
-            "Saved ATS validation results to file.",
-            extra={"ats_file": ats_filename}
-        )
+        logger.info("Saved ATS validation results to file.", extra={"ats_file": ats_filename})
 
     # 6. Compile Final Outputs
     logger.info(

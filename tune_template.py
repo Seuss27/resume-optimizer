@@ -25,7 +25,7 @@ def tune_formatting():
         gemini_output = json.load(f)
 
     # 3. Render Templates
-    env = Environment(loader=FileSystemLoader(".")) # noqa: S701
+    env = Environment(loader=FileSystemLoader("."))  # noqa: S701
     resume_template = env.get_template("resume_template.md")
 
     resume_markdown = resume_template.render(
