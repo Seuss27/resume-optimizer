@@ -9,8 +9,9 @@ Instead of maintaining dozens of fragmented resume files, this project separates
 When you find a job you want to apply for, the engine:
 1. **Compiles State:** The `build_state.py` preprocessor merges your raw `experience.csv` and `profile.csv` into a single structured JSON state file.
 2. **Filters via AI:** The `generate.py` engine passes the Job Requisition and your state file to the **Gemini API**. The AI acts as a smart filter, returning only the most relevant skills and bullet points, while extracting the Company Name and Role Title.
-3. **Injects & Renders:** The filtered data is injected into dedicated **Jinja2 Markdown templates** for both a resume and a cover letter.
-4. **Deploys:** **Pandoc** compiles the customized Markdown into two perfectly formatted Word documents, dynamically named based on the requisition (e.g., `AcmeCorp_BackendEngineer_Resume.docx`).
+3. **Optional ATS audit:** If run with `--validate`, the generated resume text is re-checked with a second Gemini review using `ats_prompt.txt`, producing a compatibility score, missing keyword list, and actionable feedback.
+4. **Injects & Renders:** The filtered data is injected into dedicated **Jinja2 Markdown templates** for both a resume and a cover letter.
+5. **Deploys:** **Pandoc** compiles the customized Markdown into two perfectly formatted Word documents, dynamically named based on the requisition (e.g., `AcmeCorp_BackendEngineer_Resume.docx`).
 
 ## Prerequisites
 
@@ -82,6 +83,9 @@ hatch run build-state
 
 # Step 2: Paste the target job requisition text to compile outputs
 hatch run generate
+
+# Optional: compile outputs and run ATS validation
+hatch run generate -- --validate
 ```
 
 ### If Using Standard Pip Entry Points (Option B)
@@ -91,6 +95,9 @@ build-resume-state
 
 # Step 2: Paste the target job requisition text to compile outputs
 generate-resume
+
+# Optional: compile outputs and run ATS validation
+generate-resume --validate
 ```
 
 *When running the generation engine, paste the text of the job description when prompted. When finished pasting, press `Enter`, then `CTRL+D` (Mac/Linux) or `CTRL+Z` then `Enter` (Windows) to submit.*
@@ -123,6 +130,7 @@ resume-optimizer/
 ├── resume_template.md       # Jinja2 layout for the resume
 ├── cover_letter_template.md # Jinja2 layout for the cover letter
 ├── system_prompt.txt        # Recruiter instructional alignment token fed to Gemini
+├── ats_prompt.txt           # ATS validation system prompt used by the optional review pass
 ├── pyproject.toml           # Declarative tool settings, dependencies, and metadata
 └── .pre-commit-config.yaml  # Local Git compliance commit hook mapping
 ```
