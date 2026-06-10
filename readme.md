@@ -10,8 +10,9 @@ When you find a job you want to apply for, the engine:
 1. **Compiles State:** The `build_state.py` preprocessor merges your raw `experience.csv` and `profile.csv` into a single structured JSON state file.
 2. **Filters via AI:** The `generate.py` engine passes the Job Requisition and your state file to the **Gemini API**. The AI acts as a smart filter, returning only the most relevant skills and bullet points, while extracting the Company Name and Role Title.
 3. **Optional ATS audit:** If run with `--validate`, the generated resume text is re-checked with a second Gemini review using `ats_prompt.txt`, producing a compatibility score, missing keyword list, and actionable feedback.
-4. **Injects & Renders:** The filtered data is injected into dedicated **Jinja2 Markdown templates** for both a resume and a cover letter.
-5. **Deploys:** **Pandoc** compiles the customized Markdown into two perfectly formatted Word documents, dynamically named based on the requisition (e.g., `AcmeCorp_BackendEngineer_Resume.docx`).
+4. **Optional Job Evaluation:** If run with `--score-job`, the original job req is evaluated against your personal preferences (`desirability_prompt.txt`), analyzing salary match, remote capabilities, and core pros/cons.
+5. **Injects & Renders:** The filtered data is injected into dedicated **Jinja2 Markdown templates** for both a resume and a cover letter. (The intermediate markdown files are cleanly removed unless `--preserve-markdown` is used).
+6. **Deploys:** **Pandoc** compiles the customized Markdown into two perfectly formatted Word documents, dynamically named based on the requisition (e.g., `AcmeCorp_BackendEngineer_Resume.docx`).
 
 ## Prerequisites
 
@@ -84,8 +85,8 @@ hatch run build-state
 # Step 2: Paste the target job requisition text to compile outputs
 hatch run generate
 
-# Optional: compile outputs and run ATS validation
-hatch run generate -- --validate
+# Optional: compile outputs, run ATS validation, evaluate job desirability, and preserve markdown files
+hatch run generate -- --validate --score-job --preserve-markdown
 ```
 
 ### If Using Standard Pip Entry Points (Option B)
@@ -125,12 +126,17 @@ resume-optimizer/
 │   └── resume_optimizer/
 │       ├── __init__.py      # Package indicator
 │       ├── build_state.py   # Data preprocessor (CSV to JSON)
-│       └── generate.py      # Core AI engine (Gemini API, templates, compilation)
+│       ├── generate.py      # Core AI engine (Gemini API, templates, compilation)
+│       └── logging_setup.py # Unified structured logging configuration
 ├── tests/                   # Complete unit test suite
 ├── resume_template.md       # Jinja2 layout for the resume
 ├── cover_letter_template.md # Jinja2 layout for the cover letter
+├── resume_reference.docx    # MS Word styles reference document used by Pandoc
 ├── system_prompt.txt        # Recruiter instructional alignment token fed to Gemini
 ├── ats_prompt.txt           # ATS validation system prompt used by the optional review pass
+├── desirability_prompt.txt  # Job desirability evaluation prompt for --score-job
+├── tune_template.py         # Utility script for tuning MS Word outputs locally
+├── dummy_gemini_output.json # Mock AI data payload used by tune_template.py
 ├── pyproject.toml           # Declarative tool settings, dependencies, and metadata
 └── .pre-commit-config.yaml  # Local Git compliance commit hook mapping
 ```
