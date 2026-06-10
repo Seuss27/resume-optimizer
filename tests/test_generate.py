@@ -495,3 +495,112 @@ def test_generate_collateral_uses_unknown_prefix_when_metadata_is_missing(tmp_pa
 
     assert (tmp_path / "UnknownCompany_UnknownRole_Resume_A.docx").exists()
     assert (tmp_path / "UnknownCompany_UnknownRole_CoverLetter_A.docx").exists()
+
+
+def test_evaluate_desirability_requests_prompt_and_returns_json(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "desirability_prompt.txt").write_text("Desirability prompt rules")
+
+    captured = {}
+
+    class FakeResponse:
+        def __init__(self, text):
+            self.text = text
+
+    class FakeModels:
+        def generate_content(self, model, contents, config):
+            captured["config"] = config
+            return FakeResponse(
+                json.dumps(
+                    {
+                        "desirability_score": 85,
+                        "salary_match": "Exceeds minimum",
+                        "remote_match": "Fully remote match",
+                        "benefits_analysis": "Includes target matching 401k",
+                        "pros": ["Good pay"],
+                        "cons": ["Unknown PTO limitations"],
+                    }
+                )
+            )
+
+    class FakeClient:
+        def __init__(self, http_options=None):
+            self.models = FakeModels()
+
+    monkeypatch.setattr(generate, "genai", type("DummyGenai", (), {"Client": FakeClient}))
+
+    prefs = {"Pref_Min_Salary": "160000"}
+    result = generate.evaluate_desirability("Looking for architect role paying 180k", prefs)
+
+    assert result["desirability_score"] == 85
+    assert result["salary_match"] == "Exceeds minimum"
+    assert captured["config"].system_instruction == "Desirability prompt rules"
+
+
+def test_generate_collateral_saves_desirability_report_when_flag_set(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    # Mock minimal master data with profile preferences
+    (tmp_path / "master_data.json").write_text(
+        json.dumps({"contact": {"Name": "Alex Tester", "Pref_Min_Salary": "150k"}})
+    )
+    (tmp_path / "system_prompt.txt").write_text("system prompt")
+    (tmp_path / "resume_template.md").write_text("Resume Layout")
+    (tmp_path / "cover_letter_template.md").write_text("Cover Letter Layout")
+
+    class FakeResponse:
+        def __init__(self, text):
+            self.text = text
+
+    class FakeModels:
+        def generate_content(self, model, contents, config):
+            # Dynamic response depending on which system prompt is being hit
+            if (
+                hasattr(config, "system_instruction")
+                and "Desirability" in config.system_instruction
+            ):
+                return FakeResponse(
+                    json.dumps(
+                        {
+                            "desirability_score": 95,
+                            "salary_match": "Match",
+                            "remote_match": "Match",
+                            "benefits_analysis": "Great",
+                            "pros": ["Remote"],
+                            "cons": [],
+                        }
+                    )
+                )
+            return FakeResponse(
+                json.dumps(
+                    {
+                        "job_metadata": {
+                            "company_name": "Stark Industries",
+                            "role_title": "Security Lead",
+                        },
+                        "cover_letter_body": "Hello",
+                    }
+                )
+            )
+
+    class FakeClient:
+        def __init__(self, http_options=None):
+            self.models = FakeModels()
+
+    monkeypatch.setattr(generate, "genai", type("DummyGenai", (), {"Client": FakeClient}))
+    monkeypatch.setattr(generate.pypandoc, "get_pandoc_version", lambda: "2.0")
+    monkeypatch.setattr(
+        generate.pypandoc,
+        "convert_file",
+        lambda input_file, fmt, outputfile, **kwargs: Path(outputfile).write_text("fake"),
+    )
+
+    # Mock the prompt loading
+    (tmp_path / "desirability_prompt.txt").write_text("Desirability core rule")
+
+    generate.generate_collateral("We are looking for a remote security expert.", evaluate_job=True)
+
+    # Initials should be AT for "Alex Tester"
+    expected_report = tmp_path / "Stark_Industries_Security_Lead_desirability_AT.txt"
+    assert expected_report.exists()
+    assert "Score: 95/100" in expected_report.read_text()

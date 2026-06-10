@@ -77,6 +77,61 @@ def validate_resume(job_req_text, resume_text):
     return json.loads(response.text)
 
 
+def evaluate_desirability(job_req_text, preferences):
+    """Evaluates a job req against the user's personal job preferences using Gemini."""
+    desirability_prompt = load_prompt("desirability_prompt.txt")
+
+    response_schema = {
+        "type": "OBJECT",
+        "properties": {
+            "desirability_score": {"type": "INTEGER"},
+            "salary_match": {"type": "STRING"},
+            "remote_match": {"type": "STRING"},
+            "benefits_analysis": {"type": "STRING"},
+            "pros": {"type": "ARRAY", "items": {"type": "STRING"}},
+            "cons": {"type": "ARRAY", "items": {"type": "STRING"}},
+        },
+        "required": ["desirability_score", "salary_match", "remote_match", "pros", "cons"],
+    }
+
+    http_options = types.HttpOptions(
+        retry_options=types.HttpRetryOptions(
+            initial_delay=2.0,
+            attempts=5,
+            http_status_codes=[429, 500, 502, 503, 504],
+        )
+    )
+    client = genai.Client(http_options=http_options)
+
+    user_prompt = (
+        f"User Preferences:\n{json.dumps(preferences, indent=2)}\n\n"
+        f"Job Requisition:\n{job_req_text}"
+    )
+
+    logger.info("Initiating job desirability evaluation Gemini API call.")
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=user_prompt,
+        config=types.GenerateContentConfig(
+            system_instruction=desirability_prompt,
+            response_mime_type="application/json",
+            response_schema=response_schema,
+            temperature=0.2,
+        ),
+    )
+
+    return json.loads(response.text)
+
+
+def print_desirability_summary(results):
+    """Prints a human-readable snippet to stdout."""
+    print("\n=== Job Desirability Evaluation ===")
+    print(f"Overall Desirability Score: {results.get('desirability_score', 0)}/100")
+    print(f"Remote Status: {results.get('remote_match', 'N/A')}")
+    print(f"Salary Status: {results.get('salary_match', 'N/A')}")
+    # ... Rest of the genai Client execution block remains exactly the same ...
+
+
 def print_ats_validation_summary(ats_results):
     print("\n=== ATS Validation Results ===")
     print(f"Score: {ats_results.get('ats_score', 0)}/100")
@@ -95,7 +150,7 @@ def print_ats_validation_summary(ats_results):
     print(json.dumps(ats_results, indent=2))
 
 
-def generate_collateral(job_req_text, validate=False, preserve_markdown=False):
+def generate_collateral(job_req_text, validate=False, preserve_markdown=False, evaluate_job=False):
     # 1. Load Local State
     if not os.path.exists("master_data.json"):
         raise FileNotFoundError("master_data.json is missing. Run the preprocessor script first.")
@@ -107,6 +162,13 @@ def generate_collateral(job_req_text, validate=False, preserve_markdown=False):
     contact_info = master_data.get("contact", {})
     full_name = contact_info.get("Name") or contact_info.get("name") or "User"
     initials = "".join([part[0].upper() for part in full_name.split() if part])
+
+    # Extract target configuration criteria for desirability evaluation
+    preferences = {
+        "Pref_Remote_Only": contact_info.get("Pref_Remote_Only", "N/A"),
+        "Pref_Min_Salary": contact_info.get("Pref_Min_Salary", "N/A"),
+        "Pref_Target_Benefits": contact_info.get("Pref_Target_Benefits", "N/A"),
+    }
 
     if not os.path.exists("system_prompt.txt"):
         raise FileNotFoundError("system_prompt.txt is missing.")
@@ -218,6 +280,35 @@ def generate_collateral(job_req_text, validate=False, preserve_markdown=False):
         cover_letter_body=gemini_output.get("cover_letter_body", ""),
     )
 
+    if evaluate_job:
+        eval_results = evaluate_desirability(job_req_text, preferences)
+        print_desirability_summary(eval_results)
+
+        desirability_filename = f"{prefix}_desirability_{initials}.txt"
+        with open(desirability_filename, "w", encoding="utf-8") as f:
+            f.write("=== Job Desirability Report ===\n")
+            f.write(f"Score: {eval_results.get('desirability_score', 0)}/100\n\n")
+            f.write(f"Remote Alignment: {eval_results.get('remote_match', 'N/A')}\n")
+            f.write(f"Salary Alignment: {eval_results.get('salary_match', 'N/A')}\n")
+            f.write(f"Benefits Analysis: {eval_results.get('benefits_analysis', 'N/A')}\n\n")
+
+            f.write("Pros:\n")
+            for pro in eval_results.get("pros", []):
+                f.write(f"  + {pro}\n")
+
+            f.write("\nCons:\n")
+            for con in eval_results.get("cons", []):
+                f.write(f"  - {con}\n")
+
+            f.write("\nRaw Desirability JSON:\n")
+            f.write(json.dumps(eval_results, indent=2))
+            f.write("\n")
+
+        logger.info(
+            "Saved job desirability metrics to file.",
+            extra={"desirability_file": desirability_filename},
+        )
+
     if validate:
         ats_results = validate_resume(job_req_text, resume_markdown)
         print_ats_validation_summary(ats_results)
@@ -312,6 +403,12 @@ def parse_args():
             "review instead of deleting them after DOCX conversion."
         ),
     )
+    parser.add_argument(
+        "--score-job",
+        action="store_true",
+        help="Run a review pass to score the job req against your personal preferences.",
+    )
+
     return parser.parse_args()
 
 
@@ -334,6 +431,7 @@ def main():
             req_input,
             validate=args.validate,
             preserve_markdown=args.preserve_markdown,
+            evaluate_job=args.score_job,
         )
     else:
         logger.info("No input detected; exiting without generating collateral.")
