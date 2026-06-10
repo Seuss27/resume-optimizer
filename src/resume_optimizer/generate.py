@@ -217,6 +217,33 @@ def generate_collateral(job_req_text, validate=False, preserve_markdown=False):
         ats_results = validate_resume(job_req_text, resume_markdown)
         print_ats_validation_summary(ats_results)
 
+        # Build the filename matching your resume/cover letter naming convention
+        ats_filename = f"{prefix}_ats.txt"
+        
+        # Save the formatted validation results to the text file
+        with open(ats_filename, "w", encoding="utf-8") as f:
+            f.write("=== ATS Validation Results ===\n")
+            f.write(f"Score: {ats_results.get('ats_score', 0)}/100\n")
+
+            missing_keywords = ats_results.get("missing_keywords") or []
+            if missing_keywords:
+                f.write("Missing keywords:\n")
+                for keyword in missing_keywords:
+                    f.write(f"  - {keyword}\n")
+            else:
+                f.write("Missing keywords: None\n")
+
+            f.write(f"Formatting compliance: {ats_results.get('formatting_compliance', 'N/A')}\n")
+            f.write(f"Critical feedback: {ats_results.get('critical_feedback', 'N/A')}\n\n")
+            f.write("Raw ATS JSON:\n")
+            f.write(json.dumps(ats_results, indent=2))
+            f.write("\n")
+
+        logger.info(
+            "Saved ATS validation results to file.",
+            extra={"ats_file": ats_filename}
+        )
+
     # 6. Compile Final Outputs
     logger.info(
         "Compiling final documents.",

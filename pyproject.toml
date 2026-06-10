@@ -81,5 +81,5 @@ test = "pytest {args:tests}"
 lint = "ruff check {args:.}"
 format = "ruff format {args:.}"
 build-state = "build-resume-state" # Calls the package entry point directly
-generate = "generate-resume"       # Calls the package entry point directly
+generate = "generate-resume {args}"
 tune = "python tune_template.py {args}"
