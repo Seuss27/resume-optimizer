@@ -46,6 +46,20 @@ def test_parse_args_defaults_preserve_markdown_to_false(monkeypatch):
     assert args.preserve_markdown is False
 
 
+def test_parse_args_defaults_grouped_layout_to_false(monkeypatch):
+    monkeypatch.setattr(sys, "argv", ["generate-resume"])
+    args = generate.parse_args()
+
+    assert args.grouped_layout is False
+
+
+def test_parse_args_enables_grouped_layout_flag(monkeypatch):
+    monkeypatch.setattr(sys, "argv", ["generate-resume", "--grouped-layout"])
+    args = generate.parse_args()
+
+    assert args.grouped_layout is True
+
+
 def test_generate_collateral_markdown_structure_is_valid(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "master_data.json").write_text(
@@ -57,15 +71,16 @@ def test_generate_collateral_markdown_structure_is_valid(tmp_path, monkeypatch):
         "## Professional Skills\n"
         "{{ skills_list | join(' • ') }}\n"
         "## Professional Experience\n"
+        "{% if grouped_layout %}GROUPED{% else %}"
         "{% for co in experience %}"
-        "### {{ co.company }} | {{ co.dates }}\n"
         "{% for role in co.roles %}"
-        "**{{ role.title }}** | *{{ role.dates }}*\n"
+        "### {{ co.company }} — {{ role.title }} | {{ role.dates }}\n"
         "{% for bullet in role.bullets %}"
         "* {{ bullet }}\n"
         "{% endfor %}"
         "{% endfor %}"
-        "{% endfor %}",
+        "{% endfor %}"
+        "{% endif %}",
         encoding="utf-8",
     )
     (tmp_path / "cover_letter_template.md").write_text(
@@ -131,8 +146,7 @@ def test_generate_collateral_markdown_structure_is_valid(tmp_path, monkeypatch):
     assert "## Professional Skills" in resume_md
     assert "## Professional Experience" in resume_md
     assert "Python • SQL" in resume_md
-    assert "### Acme Inc | 2020-2024" in resume_md
-    assert "**Developer** | *2020-2024*" in resume_md
+    assert "### Acme Inc — Developer | 2020-2024" in resume_md
     assert "* Built features." in resume_md
     assert "* Led team." in resume_md
     assert "Dear Hiring," in cover_letter_md

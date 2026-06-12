@@ -152,10 +152,18 @@ def print_ats_validation_summary(ats_results):
     print(json.dumps(ats_results, indent=2))
 
 
-def generate_collateral(job_req_text, validate=False, preserve_markdown=False, evaluate_job=False):
+def generate_collateral(
+    job_req_text,
+    validate=False,
+    preserve_markdown=False,
+    evaluate_job=False,
+    grouped_layout=False,
+):
     # 1. Load Local State
     if not os.path.exists("master_data.json"):
-        raise FileNotFoundError("master_data.json is missing. Run the preprocessor script first.")
+        raise FileNotFoundError(
+            "master_data.json is missing. Run the preprocessor script first."
+        )
 
     with open("master_data.json", "r") as f:
         master_data = json.load(f)
@@ -277,7 +285,9 @@ def generate_collateral(job_req_text, validate=False, preserve_markdown=False, e
     )
 
     # 5. Inject Data into Jinja2 Templates
-    env = Environment(loader=FileSystemLoader("."), autoescape=select_autoescape(["html", "xml"]))
+    env = Environment(
+        loader=FileSystemLoader("."), autoescape=select_autoescape(["html", "xml"])
+    )
     resume_template = env.get_template("resume_template.md")
     cover_letter_template = env.get_template("cover_letter_template.md")
 
@@ -288,6 +298,7 @@ def generate_collateral(job_req_text, validate=False, preserve_markdown=False, e
         experience=gemini_output.get("tailored_companies", []),
         certifications=gemini_output.get("selected_certifications", []),
         education=gemini_output.get("selected_education", []),
+        grouped_layout=grouped_layout,
     )
 
     cl_markdown = cover_letter_template.render(
@@ -303,9 +314,15 @@ def generate_collateral(job_req_text, validate=False, preserve_markdown=False, e
         with open(desirability_filename, "w", encoding="utf-8") as f:
             f.write("=== Job Desirability Report ===\n")
             f.write(f"Score: {eval_results.get('desirability_score', 0)}/100\n\n")
-            f.write(f"Remote Alignment: {eval_results.get('remote_match', 'N/A')}\n")
-            f.write(f"Salary Alignment: {eval_results.get('salary_match', 'N/A')}\n")
-            f.write(f"Benefits Analysis: {eval_results.get('benefits_analysis', 'N/A')}\n\n")
+            f.write(
+                f"Remote Alignment: {eval_results.get('remote_match', 'N/A')}\n"
+            )
+            f.write(
+                f"Salary Alignment: {eval_results.get('salary_match', 'N/A')}\n"
+            )
+            f.write(
+                f"Benefits Analysis: {eval_results.get('benefits_analysis', 'N/A')}\n\n"
+            )
 
             f.write("Pros:\n")
             for pro in eval_results.get("pros", []):
@@ -344,13 +361,19 @@ def generate_collateral(job_req_text, validate=False, preserve_markdown=False, e
             else:
                 f.write("Missing keywords: None\n")
 
-            f.write(f"Formatting compliance: {ats_results.get('formatting_compliance', 'N/A')}\n")
+            f.write(
+                f"Formatting compliance: "
+                f"{ats_results.get('formatting_compliance', 'N/A')}\n"
+            )
             f.write(f"Critical feedback: {ats_results.get('critical_feedback', 'N/A')}\n\n")
             f.write("Raw ATS JSON:\n")
             f.write(json.dumps(ats_results, indent=2))
             f.write("\n")
 
-        logger.info("Saved ATS validation results to file.", extra={"ats_file": ats_filename})
+        logger.info(
+            "Saved ATS validation results to file.",
+            extra={"ats_file": ats_filename},
+        )
 
     # 6. Compile Final Outputs
     logger.info(
@@ -381,7 +404,11 @@ def generate_collateral(job_req_text, validate=False, preserve_markdown=False, e
         outputfile=f"{prefix}_Resume_{initials}.docx",
         extra_args=["--reference-doc=resume_reference.docx"],
     )
-    pypandoc.convert_file("temp_cl.md", "docx", outputfile=f"{prefix}_CoverLetter_{initials}.docx")
+    pypandoc.convert_file(
+        "temp_cl.md",
+        "docx",
+        outputfile=f"{prefix}_CoverLetter_{initials}.docx",
+    )
 
     # Clean up the temporary markdown files so your folder stays clean
     if not preserve_markdown:
@@ -423,6 +450,14 @@ def parse_args():
         action="store_true",
         help="Run a review pass to score the job req against your personal preferences.",
     )
+    parser.add_argument(
+        "--grouped-layout",
+        action="store_true",
+        help=(
+            "Use the nested company layout (Company -> Roles). "
+            "Defaults to a flat chronological layout."
+        ),
+    )
 
     return parser.parse_args()
 
@@ -447,6 +482,7 @@ def main():
             validate=args.validate,
             preserve_markdown=args.preserve_markdown,
             evaluate_job=args.score_job,
+            grouped_layout=args.grouped_layout,
         )
     else:
         logger.info("No input detected; exiting without generating collateral.")
