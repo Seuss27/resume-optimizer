@@ -1,5 +1,8 @@
+"""Data preprocessor compiling user experience and profile CSVs into unified JSON state."""
+
 import json
-import os
+from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
@@ -8,26 +11,30 @@ from resume_optimizer.logging_setup import get_logger
 logger = get_logger(__name__)
 
 
-def load_profile(profile_csv_path):
+def load_profile(profile_csv_path: str) -> dict[str, Any]:
     """Reads a two-column CSV (Key, Value) into a dictionary."""
-    if not os.path.exists(profile_csv_path):
+    csv_path: Path = Path(profile_csv_path)
+    if not csv_path.exists():
         raise FileNotFoundError(f"Could not find {profile_csv_path}. Please ensure it exists.")
 
-    df_profile = pd.read_csv(profile_csv_path)
+    df_profile: pd.DataFrame = pd.read_csv(csv_path)
 
     # Convert it into a standard Python dictionary mapping Keys to Values
-    profile_dict = pd.Series(df_profile["Value"].values, index=df_profile["Key"]).to_dict()
+    profile_dict: dict[str, Any] = pd.Series(
+        df_profile["Value"].values, index=df_profile["Key"]
+    ).to_dict()
 
     return profile_dict
 
 
 def convert_sheets_to_master_data(
-    experience_csv_path,
-    profile_csv_path,
-    certs_csv_path="certifications.csv",
-    output_json_path="master_data.json",
-    education_csv_path="education.csv",
-):
+    experience_csv_path: str,
+    profile_csv_path: str,
+    certs_csv_path: str = "certifications.csv",
+    output_json_path: str = "master_data.json",
+    education_csv_path: str = "education.csv",
+) -> None:
+    """Parses experience, profile, certs, and education CSVs into a centralized JSON master file."""
     # Support a common 3-argument call pattern where the third positional
     # argument is intended to be the output path.
     if (
@@ -38,41 +45,65 @@ def convert_sheets_to_master_data(
         output_json_path, certs_csv_path = certs_csv_path, "certifications.csv"
 
     # 1. Load the abstracted profile details
-    user_profile = load_profile(profile_csv_path)
+    user_profile: dict[str, Any] = load_profile(profile_csv_path)
 
     # 2. Read the experience CSV
-    if not os.path.exists(experience_csv_path):
+    experience_path: Path = Path(experience_csv_path)
+    if not experience_path.exists():
         raise FileNotFoundError(f"Could not find {experience_csv_path}. Please ensure it exists.")
 
-    df_experience = pd.read_csv(experience_csv_path)
+    df_experience: pd.DataFrame = pd.read_csv(experience_path)
 
     # 3. Initialize the base JSON structure
-    master_data = {
+    master_data: dict[str, Any] = {
         "contact": user_profile,
         "all_skills": [],
-        "roles": [],
+        "companies": [],
         "certifications": [],
         "education": [],
     }
 
     # 4. Extract all unique skills from the 'Keywords / Tech Stack' column
     if "Keywords / Tech Stack" in df_experience.columns:
-        all_skills_nested = df_experience["Keywords / Tech Stack"].dropna().str.split(",").tolist()
-        flat_skills = list(
+        all_skills_nested: list[list[str]] = (
+            df_experience["Keywords / Tech Stack"].dropna().str.split(",").tolist()
+        )
+        flat_skills: list[str] = list(
             set([skill.strip() for sublist in all_skills_nested for skill in sublist])
         )
         master_data["all_skills"] = sorted(flat_skills)
 
     # 5. Fill optional columns with defaults to make grouping robust.
-    if "Years Active" not in df_experience.columns:
-        df_experience["Years Active"] = ""
+    if "Role Start" not in df_experience.columns:
+        df_experience["Role Start"] = ""
+    if "Role End" not in df_experience.columns:
+        df_experience["Role End"] = ""
 
-    grouped = df_experience.groupby(["Company", "Role Title", "Years Active"], sort=False)
+    def format_dates(row):
+        start = str(row.get("Role Start", "")).strip()
+        end = str(row.get("Role End", "")).strip()
+
+        if start.lower() == "nan":
+            start = ""
+        if end.lower() == "nan":
+            end = ""
+
+        if start and end:
+            return f"{start} - {end}"
+        elif start:
+            return f"{start} - Present"
+        elif end:
+            return end
+        return ""
+
+    df_experience["Role Dates"] = df_experience.apply(format_dates, axis=1)
+
+    companies_dict: dict[str, dict[str, Any]] = {}
+    grouped = df_experience.groupby(["Company", "Role Title", "Role Dates"], sort=False)
 
     for (company, title, dates), group in grouped:
         role_entry = {
             "title": title,
-            "company": company,
             "dates": dates,
             "master_bullets": [],
         }
@@ -94,11 +125,16 @@ def convert_sheets_to_master_data(
             if bullet:
                 role_entry["master_bullets"].append(bullet)
 
-        master_data["roles"].append(role_entry)
+        if company not in companies_dict:
+            companies_dict[company] = {"company": company, "roles": []}
+        companies_dict[company]["roles"].append(role_entry)
+
+    master_data["companies"] = list(companies_dict.values())
 
     # 7. Extract Certifications (Graceful Warning Fallback)
-    if os.path.exists(certs_csv_path):
-        df_certs = pd.read_csv(certs_csv_path)
+    certs_path: Path = Path(certs_csv_path)
+    if certs_path.exists():
+        df_certs: pd.DataFrame = pd.read_csv(certs_path)
         for _, row in df_certs.iterrows():
             name = str(row.get("Name", "")).strip()
             issuer = str(row.get("Issuer", "")).strip()
@@ -120,8 +156,9 @@ def convert_sheets_to_master_data(
         raise FileNotFoundError(f"Could not find {certs_csv_path}. Please ensure it exists.")
 
     # 8. Extract Education (Graceful Warning Fallback)
-    if os.path.exists(education_csv_path):
-        df_education = pd.read_csv(education_csv_path)
+    edu_path: Path = Path(education_csv_path)
+    if edu_path.exists():
+        df_education: pd.DataFrame = pd.read_csv(edu_path)
         for _, row in df_education.iterrows():
             degree = str(row.get("Degree", "")).strip()
             institution = str(row.get("Institution", "")).strip()
@@ -143,7 +180,8 @@ def convert_sheets_to_master_data(
         raise FileNotFoundError(f"Could not find {education_csv_path}. Please ensure it exists.")
 
     # 9. Save out the structured JSON
-    with open(output_json_path, "w") as f:
+    out_path: Path = Path(output_json_path)
+    with out_path.open("w") as f:
         json.dump(master_data, f, indent=4)
 
     logger.info(
@@ -152,7 +190,8 @@ def convert_sheets_to_master_data(
     )
 
 
-def main():
+def main() -> None:
+    """Entry point for local execution to build unified state."""
     # Ensure you have downloaded your two tabs as 'experience.csv' and 'profile.csv'
     convert_sheets_to_master_data("experience.csv", "profile.csv")
 

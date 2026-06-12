@@ -7,34 +7,29 @@ name = "resume-optimizer"
 dynamic = ["version"]
 description = "A 'Resume-as-Code' pipeline using Gemini API, Jinja2, and Pandoc"
 readme = "readme.md"
-requires-python = ">=3.12"
-authors = [
-    { name = "Jared Groves", email = "jgroves27@gmail.com" }
-]
+requires-python = ">=3.10"
+authors = [{ name = "Jared Groves", email = "jgroves27@gmail.com" }]
+keywords = ["resume", "automation", "llm", "gemini", "pandoc", "jinja2", "ats"]
 classifiers = [
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
     "Operating System :: OS Independent",
 ]
-dependencies = [
-    "google-genai",
-    "Jinja2",
-    "pypandoc",
-    "python-dotenv",
-    "pandas",
-]
+dependencies = ["google-genai", "Jinja2", "pandas", "pypandoc", "python-dotenv"]
+
+[project.urls]
+Repository = "https://github.com/Seuss27/resume-optimizer"
 
 [project.optional-dependencies]
-dev = [
-    "pytest",
-    "ruff",
-]
+dev = ["pytest", "ruff"]
 
 # Define clean CLI entry points mapping directly to your functions
 [project.scripts]
-generate-resume = "resume_optimizer.generate:main" 
+generate-resume = "resume_optimizer.generate:main"
 build-resume-state = "resume_optimizer.build_state:main"
 
 [tool.ruff]
@@ -71,15 +66,12 @@ line-ending = "auto"
 path = "src/resume_optimizer/generate.py"
 
 [tool.hatch.envs.default]
-dependencies = [
-  "pytest",
-  "ruff",
-]
+dependencies = ["pytest", "ruff"]
 
 [tool.hatch.envs.default.scripts]
 test = "pytest {args:tests}"
 lint = "ruff check {args:.}"
 format = "ruff format {args:.}"
-build-state = "build-resume-state" # Calls the package entry point directly
+build-state = "build-resume-state"      # Calls the package entry point directly
 generate = "generate-resume {args}"
 tune = "python tune_template.py {args}"
