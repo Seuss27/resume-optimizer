@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 import re
+from typing import Any, Dict
 
 import pypandoc
 from dotenv import load_dotenv
@@ -23,7 +24,7 @@ if not os.environ.get("GEMINI_API_KEY"):
     )
 
 
-def clean_filename(text):
+def clean_filename(text: str | None) -> str:
     """Sanitizes strings to be safe for OS file names."""
     if not text:
         return "Unknown"
@@ -32,7 +33,8 @@ def clean_filename(text):
     return clean
 
 
-def load_prompt(prompt_filename):
+def load_prompt(prompt_filename: str) -> str:
+    """Loads a prompt text file from disk."""
     if not os.path.exists(prompt_filename):
         raise FileNotFoundError(f"{prompt_filename} is missing.")
 
@@ -40,7 +42,7 @@ def load_prompt(prompt_filename):
         return f.read()
 
 
-def validate_resume(job_req_text, resume_text):
+def validate_resume(job_req_text: str, resume_text: str) -> Dict[str, Any]:
     ats_prompt = load_prompt("ats_prompt.txt")
     response_schema = {
         "type": "OBJECT",
@@ -77,7 +79,7 @@ def validate_resume(job_req_text, resume_text):
     return json.loads(response.text)
 
 
-def evaluate_desirability(job_req_text, preferences):
+def evaluate_desirability(job_req_text: str, preferences: Dict[str, str]) -> Dict[str, Any]:
     """Evaluates a job req against the user's personal job preferences using Gemini."""
     desirability_prompt = load_prompt("desirability_prompt.txt")
 

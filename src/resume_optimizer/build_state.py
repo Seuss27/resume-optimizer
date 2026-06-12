@@ -1,5 +1,6 @@
 import json
 import os
+from typing import Any, Dict
 
 import pandas as pd
 
@@ -8,7 +9,7 @@ from resume_optimizer.logging_setup import get_logger
 logger = get_logger(__name__)
 
 
-def load_profile(profile_csv_path):
+def load_profile(profile_csv_path: str) -> Dict[str, Any]:
     """Reads a two-column CSV (Key, Value) into a dictionary."""
     if not os.path.exists(profile_csv_path):
         raise FileNotFoundError(f"Could not find {profile_csv_path}. Please ensure it exists.")
@@ -22,11 +23,11 @@ def load_profile(profile_csv_path):
 
 
 def convert_sheets_to_master_data(
-    experience_csv_path,
-    profile_csv_path,
-    certs_csv_path="certifications.csv",
-    output_json_path="master_data.json",
-    education_csv_path="education.csv",
+    experience_csv_path: str,
+    profile_csv_path: str,
+    certs_csv_path: str = "certifications.csv",
+    output_json_path: str = "master_data.json",
+    education_csv_path: str = "education.csv",
 ):
     # Support a common 3-argument call pattern where the third positional
     # argument is intended to be the output path.
@@ -64,11 +65,32 @@ def convert_sheets_to_master_data(
         master_data["all_skills"] = sorted(flat_skills)
 
     # 5. Fill optional columns with defaults to make grouping robust.
-    if "Years Active" not in df_experience.columns:
-        df_experience["Years Active"] = ""
+    if "Role Start" not in df_experience.columns:
+        df_experience["Role Start"] = ""
+    if "Role End" not in df_experience.columns:
+        df_experience["Role End"] = ""
+
+    def format_dates(row):
+        start = str(row.get("Role Start", "")).strip()
+        end = str(row.get("Role End", "")).strip()
+
+        if start.lower() == "nan":
+            start = ""
+        if end.lower() == "nan":
+            end = ""
+
+        if start and end:
+            return f"{start} - {end}"
+        elif start:
+            return f"{start} - Present"
+        elif end:
+            return end
+        return ""
+
+    df_experience["Role Dates"] = df_experience.apply(format_dates, axis=1)
 
     companies_dict = {}
-    grouped = df_experience.groupby(["Company", "Role Title", "Years Active"], sort=False)
+    grouped = df_experience.groupby(["Company", "Role Title", "Role Dates"], sort=False)
 
     for (company, title, dates), group in grouped:
         role_entry = {
