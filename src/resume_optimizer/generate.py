@@ -18,7 +18,7 @@ from resume_optimizer.logging_setup import get_logger
 
 logger = get_logger(__name__)
 
-__version__: str = "0.1.0"
+__version__ = "0.1.0"
 
 load_dotenv()
 
