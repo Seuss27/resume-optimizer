@@ -5,7 +5,7 @@
 ---
 
 {% if professional_summary %}
-{{ professional_summary | wordwrap(100) }}
+{{ professional_summary }}
 
 ---
 {% endif %}
@@ -26,7 +26,7 @@
 
 {% for bullet in role.bullets %}
 
-* {{ bullet | wordwrap(98) }}
+* {{ bullet }}
 {% endfor %}
 {% endfor %}
 {% endfor %}
@@ -38,7 +38,7 @@
 
 {% for bullet in role.bullets %}
 
-* {{ bullet | wordwrap(98) }}
+* {{ bullet }}
 {% endfor %}
 {% endfor %}
 {% endfor %}
@@ -49,7 +49,7 @@
 
 {% for cert in certifications %}
 
-* {{ cert | wordwrap(98) }}
+* {{ cert }}
 {% endfor %}
 {% endif %}
 {% if education and education|length > 0 %}

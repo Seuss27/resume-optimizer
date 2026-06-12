@@ -1,8 +1,12 @@
+"""Core AI engine handling Gemini API integration, prompt orchestration, and Pandoc generation."""
+
 import argparse
 import json
 import os
 import re
-from typing import Any, Dict
+import sys
+from pathlib import Path
+from typing import Any
 
 import pypandoc
 from dotenv import load_dotenv
@@ -14,7 +18,7 @@ from resume_optimizer.logging_setup import get_logger
 
 logger = get_logger(__name__)
 
-__version__ = "0.1.0"
+__version__: str = "0.1.0"
 
 load_dotenv()
 
@@ -25,26 +29,42 @@ if not os.environ.get("GEMINI_API_KEY"):
 
 
 def clean_filename(text: str | None) -> str:
-    """Sanitizes strings to be safe for OS file names."""
+    """Sanitizes strings to be safe for OS file names.
+
+    Args:
+        text: The raw string to sanitize.
+
+    Returns:
+        A clean, file-system-safe string.
+    """
     if not text:
         return "Unknown"
     # Replace spaces with underscores and strip out non-alphanumeric characters
-    clean = re.sub(r"[^a-zA-Z0-9_\-]", "", text.replace(" ", "_"))
+    clean: str = re.sub(r"[^a-zA-Z0-9_\-]", "", text.replace(" ", "_"))
     return clean
 
 
 def load_prompt(prompt_filename: str) -> str:
-    """Loads a prompt text file from disk."""
-    if not os.path.exists(prompt_filename):
+    """Loads a prompt text file from disk.
+
+    Args:
+        prompt_filename: The local filename of the text file to read.
+
+    Returns:
+        The string contents of the requested file.
+    """
+    prompt_path: Path = Path(prompt_filename)
+    if not prompt_path.exists():
         raise FileNotFoundError(f"{prompt_filename} is missing.")
 
-    with open(prompt_filename, "r", encoding="utf-8") as f:
+    with prompt_path.open("r", encoding="utf-8") as f:
         return f.read()
 
 
-def validate_resume(job_req_text: str, resume_text: str) -> Dict[str, Any]:
-    ats_prompt = load_prompt("ats_prompt.txt")
-    response_schema = {
+def validate_resume(job_req_text: str, resume_text: str) -> dict[str, Any]:
+    """Validates the generated resume against the target job requisition via Gemini."""
+    ats_prompt: str = load_prompt("ats_prompt.txt")
+    response_schema: dict[str, Any] = {
         "type": "OBJECT",
         "properties": {
             "ats_score": {"type": "INTEGER"},
@@ -54,15 +74,15 @@ def validate_resume(job_req_text: str, resume_text: str) -> Dict[str, Any]:
         },
     }
 
-    http_options = types.HttpOptions(
+    http_options: types.HttpOptions = types.HttpOptions(
         retry_options=types.HttpRetryOptions(
             initial_delay=2.0,
             attempts=5,
             http_status_codes=[429, 500, 502, 503, 504],
         )
     )
-    client = genai.Client(http_options=http_options)
-    user_prompt = f"Job Requisition:\n{job_req_text}\n\nGenerated Resume Text:\n{resume_text}"
+    client: genai.Client = genai.Client(http_options=http_options)
+    user_prompt: str = f"Job Requisition:\n{job_req_text}\n\nGenerated Resume Text:\n{resume_text}"
 
     logger.info("Initiating ATS validation Gemini API call.")
     response = client.models.generate_content(
@@ -76,14 +96,23 @@ def validate_resume(job_req_text: str, resume_text: str) -> Dict[str, Any]:
         ),
     )
 
-    return json.loads(response.text)
+    result: dict[str, Any] = json.loads(response.text)
+    return result
 
 
-def evaluate_desirability(job_req_text: str, preferences: Dict[str, str]) -> Dict[str, Any]:
-    """Evaluates a job req against the user's personal job preferences using Gemini."""
-    desirability_prompt = load_prompt("desirability_prompt.txt")
+def evaluate_desirability(job_req_text: str, preferences: dict[str, str]) -> dict[str, Any]:
+    """Evaluates a job req against the user's personal job preferences using Gemini.
 
-    response_schema = {
+    Args:
+        job_req_text: The source job description.
+        preferences: A dictionary mapping preference keys to required values.
+
+    Returns:
+        A dictionary containing the desirability score, match analyses, pros, and cons.
+    """
+    desirability_prompt: str = load_prompt("desirability_prompt.txt")
+
+    response_schema: dict[str, Any] = {
         "type": "OBJECT",
         "properties": {
             "desirability_score": {"type": "INTEGER"},
@@ -96,16 +125,16 @@ def evaluate_desirability(job_req_text: str, preferences: Dict[str, str]) -> Dic
         "required": ["desirability_score", "salary_match", "remote_match", "pros", "cons"],
     }
 
-    http_options = types.HttpOptions(
+    http_options: types.HttpOptions = types.HttpOptions(
         retry_options=types.HttpRetryOptions(
             initial_delay=2.0,
             attempts=5,
             http_status_codes=[429, 500, 502, 503, 504],
         )
     )
-    client = genai.Client(http_options=http_options)
+    client: genai.Client = genai.Client(http_options=http_options)
 
-    user_prompt = (
+    user_prompt: str = (
         f"User Preferences:\n{json.dumps(preferences, indent=2)}\n\n"
         f"Job Requisition:\n{job_req_text}"
     )
@@ -122,23 +151,32 @@ def evaluate_desirability(job_req_text: str, preferences: Dict[str, str]) -> Dic
         ),
     )
 
-    return json.loads(response.text)
+    result: dict[str, Any] = json.loads(response.text)
+    return result
 
 
-def print_desirability_summary(results):
-    """Prints a human-readable snippet to stdout."""
+def print_desirability_summary(results: dict[str, Any]) -> None:
+    """Prints a human-readable snippet to stdout.
+
+    Args:
+        results: The parsed dictionary from evaluate_desirability.
+    """
     print("\n=== Job Desirability Evaluation ===")
     print(f"Overall Desirability Score: {results.get('desirability_score', 0)}/100")
     print(f"Remote Status: {results.get('remote_match', 'N/A')}")
     print(f"Salary Status: {results.get('salary_match', 'N/A')}")
-    # ... Rest of the genai Client execution block remains exactly the same ...
 
 
-def print_ats_validation_summary(ats_results):
+def print_ats_validation_summary(ats_results: dict[str, Any]) -> None:
+    """Prints a human-readable ATS summary to stdout.
+
+    Args:
+        ats_results: The parsed dictionary from validate_resume.
+    """
     print("\n=== ATS Validation Results ===")
     print(f"Score: {ats_results.get('ats_score', 0)}/100")
 
-    missing_keywords = ats_results.get("missing_keywords") or []
+    missing_keywords: list[str] = ats_results.get("missing_keywords") or []
     if missing_keywords:
         print("Missing keywords:")
         for keyword in missing_keywords:
@@ -153,41 +191,50 @@ def print_ats_validation_summary(ats_results):
 
 
 def generate_collateral(
-    job_req_text,
-    validate=False,
-    preserve_markdown=False,
-    evaluate_job=False,
-    grouped_layout=False,
-):
-    # 1. Load Local State
-    if not os.path.exists("master_data.json"):
-        raise FileNotFoundError(
-            "master_data.json is missing. Run the preprocessor script first."
-        )
+    job_req_text: str,
+    validate: bool = False,
+    preserve_markdown: bool = False,
+    evaluate_job: bool = False,
+    grouped_layout: bool = False,
+) -> None:
+    """Generates tailored resume and cover letter content using Gemini and Pandoc.
 
-    with open("master_data.json", "r") as f:
-        master_data = json.load(f)
+    Args:
+        job_req_text: The target job requisition text.
+        validate: If True, performs a secondary ATS validation pass.
+        preserve_markdown: If True, keeps the intermediate Markdown files.
+        evaluate_job: If True, evaluates the job against personal preferences.
+        grouped_layout: If True, uses the nested layout template.
+    """
+    # 1. Load Local State
+    master_data_path: Path = Path("master_data.json")
+    if not master_data_path.exists():
+        raise FileNotFoundError("master_data.json is missing. Run the preprocessor script first.")
+
+    with master_data_path.open("r", encoding="utf-8") as f:
+        master_data: dict[str, Any] = json.load(f)
 
     # DYNAMIC INITIALS DERIVATION
-    contact_info = master_data.get("contact", {})
-    full_name = contact_info.get("Name") or contact_info.get("name") or "User"
-    initials = "".join([part[0].upper() for part in full_name.split() if part])
+    contact_info: dict[str, str] = master_data.get("contact", {})
+    full_name: str = contact_info.get("Name") or contact_info.get("name") or "User"
+    initials: str = "".join([part[0].upper() for part in full_name.split() if part])
 
     # Extract target configuration criteria for desirability evaluation
-    preferences = {
+    preferences: dict[str, str] = {
         "Pref_Remote_Only": contact_info.get("Pref_Remote_Only", "N/A"),
         "Pref_Min_Salary": contact_info.get("Pref_Min_Salary", "N/A"),
         "Pref_Target_Benefits": contact_info.get("Pref_Target_Benefits", "N/A"),
     }
 
-    if not os.path.exists("system_prompt.txt"):
+    sys_prompt_path: Path = Path("system_prompt.txt")
+    if not sys_prompt_path.exists():
         raise FileNotFoundError("system_prompt.txt is missing.")
 
-    with open("system_prompt.txt", "r") as f:
-        system_prompt = f.read()
+    with sys_prompt_path.open("r", encoding="utf-8") as f:
+        system_prompt: str = f.read()
 
     # 2. Define the Schema (Now including job_metadata extraction)
-    response_schema = {
+    response_schema: dict[str, Any] = {
         "type": "OBJECT",
         "properties": {
             "job_metadata": {
@@ -202,9 +249,8 @@ def generate_collateral(
             "selected_certifications": {
                 "type": "ARRAY",
                 "items": {"type": "STRING"},
-                "description": "Optional. Leave empty if no certifications are relevant.",
+                "description": "Optional. Omit if no certs are relevant.",
             },
-            # In generate_collateral() response_schema definition:
             "tailored_companies": {
                 "type": "ARRAY",
                 "items": {
@@ -213,7 +259,7 @@ def generate_collateral(
                         "company": {"type": "STRING"},
                         "dates": {
                             "type": "STRING",
-                            "description": "The full date range worked at this company.",
+                            "description": "Full date range worked at company.",
                         },
                         "roles": {
                             "type": "ARRAY",
@@ -239,23 +285,22 @@ def generate_collateral(
                         "year": {"type": "STRING"},
                     },
                 },
-                "description": "Optional. Include only educations relevant to the job requisition.",
+                "description": "Optional. Educations relevant to requisition.",
             },
             "cover_letter_body": {"type": "STRING"},
         },
     }
 
     # 3. Call the API
-    # Configure automatic retries for transient server errors (like 503s)
-    http_options = types.HttpOptions(
+    http_options: types.HttpOptions = types.HttpOptions(
         retry_options=types.HttpRetryOptions(
-            initial_delay=2.0,  # Wait 2 seconds before the first retry
-            attempts=5,  # Try up to 5 times before giving up
+            initial_delay=2.0,
+            attempts=5,
             http_status_codes=[429, 500, 502, 503, 504],
         )
     )
-    client = genai.Client(http_options=http_options)
-    user_prompt = f"Job Req:\n{job_req_text}\n\nMaster Data:\n{json.dumps(master_data)}"
+    client: genai.Client = genai.Client(http_options=http_options)
+    user_prompt: str = f"Job Req:\n{job_req_text}\n\nMaster Data:\n{json.dumps(master_data)}"
 
     logger.info("Initiating Gemini API call.")
 
@@ -271,27 +316,23 @@ def generate_collateral(
     )
 
     # 4. Parse the Response & Generate Filename Prefix
-    gemini_output = json.loads(response.text)
+    gemini_output: dict[str, Any] = json.loads(response.text)
 
-    # Safely extract company and role, defaulting to "Unknown" if the AI couldn't find them
-    meta = gemini_output.get("job_metadata", {})
-    company = clean_filename(meta.get("company_name", "UnknownCompany"))
-    role = clean_filename(meta.get("role_title", "UnknownRole"))
+    meta: dict[str, str] = gemini_output.get("job_metadata", {})
+    company: str = clean_filename(meta.get("company_name", "UnknownCompany"))
+    role: str = clean_filename(meta.get("role_title", "UnknownRole"))
 
-    prefix = f"{company}_{role}"
-    logger.info(
-        "AI processing complete.",
-        extra={"output_prefix": prefix},
-    )
+    prefix: str = f"{company}_{role}"
+    logger.info("AI processing complete.", extra={"output_prefix": prefix})
 
     # 5. Inject Data into Jinja2 Templates
-    env = Environment(
+    env: Environment = Environment(
         loader=FileSystemLoader("."), autoescape=select_autoescape(["html", "xml"])
     )
     resume_template = env.get_template("resume_template.md")
     cover_letter_template = env.get_template("cover_letter_template.md")
 
-    resume_markdown = resume_template.render(
+    resume_markdown: str = resume_template.render(
         contact=master_data.get("contact", {}),
         professional_summary=gemini_output.get("professional_summary", ""),
         skills_list=gemini_output.get("selected_skills", []),
@@ -301,28 +342,22 @@ def generate_collateral(
         grouped_layout=grouped_layout,
     )
 
-    cl_markdown = cover_letter_template.render(
+    cl_markdown: str = cover_letter_template.render(
         contact=master_data.get("contact", {}),
         cover_letter_body=gemini_output.get("cover_letter_body", ""),
     )
 
     if evaluate_job:
-        eval_results = evaluate_desirability(job_req_text, preferences)
+        eval_results: dict[str, Any] = evaluate_desirability(job_req_text, preferences)
         print_desirability_summary(eval_results)
 
-        desirability_filename = f"{prefix}_desirability_{initials}.txt"
-        with open(desirability_filename, "w", encoding="utf-8") as f:
+        desirability_file: Path = Path(f"{prefix}_desirability_{initials}.txt")
+        with desirability_file.open("w", encoding="utf-8") as f:
             f.write("=== Job Desirability Report ===\n")
             f.write(f"Score: {eval_results.get('desirability_score', 0)}/100\n\n")
-            f.write(
-                f"Remote Alignment: {eval_results.get('remote_match', 'N/A')}\n"
-            )
-            f.write(
-                f"Salary Alignment: {eval_results.get('salary_match', 'N/A')}\n"
-            )
-            f.write(
-                f"Benefits Analysis: {eval_results.get('benefits_analysis', 'N/A')}\n\n"
-            )
+            f.write(f"Remote Alignment: {eval_results.get('remote_match', 'N/A')}\n")
+            f.write(f"Salary Alignment: {eval_results.get('salary_match', 'N/A')}\n")
+            f.write(f"Benefits Analysis: {eval_results.get('benefits_analysis', 'N/A')}\n\n")
 
             f.write("Pros:\n")
             for pro in eval_results.get("pros", []):
@@ -338,22 +373,19 @@ def generate_collateral(
 
         logger.info(
             "Saved job desirability metrics to file.",
-            extra={"desirability_file": desirability_filename},
+            extra={"desirability_file": str(desirability_file)},
         )
 
     if validate:
-        ats_results = validate_resume(job_req_text, resume_markdown)
+        ats_results: dict[str, Any] = validate_resume(job_req_text, resume_markdown)
         print_ats_validation_summary(ats_results)
 
-        # Build the filename matching your resume/cover letter naming convention
-        ats_filename = f"{prefix}_ats_{initials}.txt"
-
-        # Save the formatted validation results to the text file
-        with open(ats_filename, "w", encoding="utf-8") as f:
+        ats_file: Path = Path(f"{prefix}_ats_{initials}.txt")
+        with ats_file.open("w", encoding="utf-8") as f:
             f.write("=== ATS Validation Results ===\n")
             f.write(f"Score: {ats_results.get('ats_score', 0)}/100\n")
 
-            missing_keywords = ats_results.get("missing_keywords") or []
+            missing_keywords: list[str] = ats_results.get("missing_keywords") or []
             if missing_keywords:
                 f.write("Missing keywords:\n")
                 for keyword in missing_keywords:
@@ -361,10 +393,7 @@ def generate_collateral(
             else:
                 f.write("Missing keywords: None\n")
 
-            f.write(
-                f"Formatting compliance: "
-                f"{ats_results.get('formatting_compliance', 'N/A')}\n"
-            )
+            f.write(f"Formatting compliance: {ats_results.get('formatting_compliance', 'N/A')}\n")
             f.write(f"Critical feedback: {ats_results.get('critical_feedback', 'N/A')}\n\n")
             f.write("Raw ATS JSON:\n")
             f.write(json.dumps(ats_results, indent=2))
@@ -372,7 +401,7 @@ def generate_collateral(
 
         logger.info(
             "Saved ATS validation results to file.",
-            extra={"ats_file": ats_filename},
+            extra={"ats_file": str(ats_file)},
         )
 
     # 6. Compile Final Outputs
@@ -391,40 +420,46 @@ def generate_collateral(
         logger.info("Pandoc engine not found; downloading it now.")
         pypandoc.download_pandoc()
 
-    # Temporary markdown files
-    with open("temp_resume.md", "w", encoding="utf-8") as f:
+    temp_resume: Path = Path("temp_resume.md")
+    temp_cl: Path = Path("temp_cl.md")
+
+    with temp_resume.open("w", encoding="utf-8") as f:
         f.write(resume_markdown)
-    with open("temp_cl.md", "w", encoding="utf-8") as f:
+    with temp_cl.open("w", encoding="utf-8") as f:
         f.write(cl_markdown)
 
     # Convert to DOCX
     pypandoc.convert_file(
-        "temp_resume.md",
+        str(temp_resume),
         "docx",
         outputfile=f"{prefix}_Resume_{initials}.docx",
         extra_args=["--reference-doc=resume_reference.docx"],
     )
     pypandoc.convert_file(
-        "temp_cl.md",
+        str(temp_cl),
         "docx",
         outputfile=f"{prefix}_CoverLetter_{initials}.docx",
     )
 
-    # Clean up the temporary markdown files so your folder stays clean
     if not preserve_markdown:
-        os.remove("temp_resume.md")
-        os.remove("temp_cl.md")
+        temp_resume.unlink()
+        temp_cl.unlink()
     else:
         logger.info(
             "Preserving markdown files for template tuning.",
-            extra={"resume_md": "temp_resume.md", "cover_letter_md": "temp_cl.md"},
+            extra={"resume_md": str(temp_resume), "cover_letter_md": str(temp_cl)},
         )
 
     logger.info("Successfully deployed generated files.")
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(
+def parse_args() -> argparse.Namespace:
+    """Parses command-line arguments for the generation script.
+
+    Returns:
+        The parsed argument namespace.
+    """
+    parser: argparse.ArgumentParser = argparse.ArgumentParser(
         description=(
             "Generate a job-targeted resume and optionally validate it against ATS expectations."
         )
@@ -462,8 +497,9 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
-    args = parse_args()
+def main() -> None:
+    """Entry point to handle STDIN reading and initiate the resume pipeline."""
+    args: argparse.Namespace = parse_args()
 
     print("--- The JIT Resume Engine ---")
     print("Paste the target Job Requisition below.")
@@ -472,9 +508,7 @@ def main():
         "or CTRL+Z then Enter (Windows) to submit:\n"
     )
 
-    import sys
-
-    req_input = sys.stdin.read()
+    req_input: str = sys.stdin.read()
 
     if req_input.strip():
         generate_collateral(
