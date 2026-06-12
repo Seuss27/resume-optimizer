@@ -35,7 +35,7 @@ only the most relevant information tailored to the Job Requisition.
       3. Catalyst/Leadership: Highlight strategic execution, team leadership, innovation, or the ability to bridge complex environments.
       4. Business Impact: Explicitly link technical or operational capability to systemic business outcomes, risk mitigation, or value delivery.
       5. Forward Value: Conclude with a sharp, forward-looking value proposition aligned with the target role's ultimate objective.
-Focus strictly on objective evidence, systemic impact, and concrete methodologies found in the Master Data. Avoid high-level subjective fluff, generic adjectives, or buzzwords.
+    Focus strictly on objective evidence, systemic impact, and concrete methodologies found in the Master Data. Avoid high-level subjective fluff, generic adjectives, or buzzwords.
 *   **Selected Skills:** Extract an array of skills from the Master Data's `all_skills` list that
     are explicitly required or highly relevant to the Job Requisition.
 *   **Certifications & Education:** Filter the Master Data for items relevant to the job. Leave
