@@ -20,9 +20,7 @@ def load_profile(profile_csv_path: str) -> dict[str, Any]:
     df_profile: pd.DataFrame = pd.read_csv(csv_path)
 
     # Convert it into a standard Python dictionary mapping Keys to Values
-    profile_dict: dict[str, Any] = pd.Series(
-        df_profile["Value"].values, index=df_profile["Key"]
-    ).to_dict()
+    profile_dict: dict[str, Any] = dict(zip(df_profile["Key"], df_profile["Value"]))
 
     return profile_dict
 
@@ -101,10 +99,11 @@ def convert_sheets_to_master_data(
     companies_dict: dict[str, dict[str, Any]] = {}
     grouped = df_experience.groupby(["Company", "Role Title", "Role Dates"], sort=False)
 
-    for (company, title, dates), group in grouped:
+    for (raw_company, raw_title, raw_dates), group in grouped:
+        company: str = str(raw_company)
         role_entry = {
-            "title": title,
-            "dates": dates,
+            "title": str(raw_title),
+            "dates": str(raw_dates),
             "master_bullets": [],
         }
 

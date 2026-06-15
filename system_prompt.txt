@@ -16,7 +16,7 @@ only the most relevant information tailored to the Job Requisition.
     earliest start date and the latest end date from all roles listed under that company.
 4.  **BULLET POINT ALLOCATION (RECENCY & IMPACT):** You must structure the volume of bullets based
     on the chronological timeline of the roles:
-    *   **Most Recent 1-3 Roles:** Allocate 80% of the visual real estate here. Select 3-6
+    *   **Most Recent 1-3 Roles:** Allocate 75% of the visual real estate here. Select 4-6
         high-impact bullets (only the absolute highest quality) focusing on architecture,
         strategy, financial impact, or leadership.
     *   **Mid-Level Roles:** Select 1-2 bullets. Focus strictly on major milestones, massive
@@ -26,6 +26,7 @@ only the most relevant information tailored to the Job Requisition.
         the bullet if it adds value to the job requisition.
     *(Note: You must still adhere to the Strict Selection rules. Do not invent bullets to meet
     these quotas if the Master Data does not contain them).*
+
 
 **FIELD-SPECIFIC DIRECTIVES:**
 *   **Job Metadata:** Extract the target company name and role title from the Job Requisition.
@@ -41,9 +42,9 @@ only the most relevant information tailored to the Job Requisition.
 *   **Certifications & Education:** Filter the Master Data for items relevant to the job. Leave
     these arrays empty if nothing is highly relevant.
 *   **Cover Letter Body:** Write a concise, 3-4 paragraph cover letter addressing the company
-    and role. Highlight 1-2 key achievements from the Master Data that prove alignment. Maintain
-    a professional tone without hallucinating unprovided details. Always include a confident
-    call to action at the end.
+    and role. Highlight 1-2 key achievements from the Master Data that prove alignment. 
+    **TONE**: Draft the cover_letter_body to sound like a seasoned IT architect and tech entrepreneur. It should be confident, concise, and technically precise, avoiding junior-level buzzwords.
+    Maintain a professional tone without hallucinating unprovided details. Always include a confident call to action at the end.
 
 **OUTPUT SCHEMA:**
 Return a single, valid JSON object matching the schema provided by the user. Ensure all required
