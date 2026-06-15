@@ -96,7 +96,7 @@ def validate_resume(job_req_text: str, resume_text: str) -> dict[str, Any]:
         ),
     )
 
-    result: dict[str, Any] = json.loads(response.text)
+    result: dict[str, Any] = json.loads(response.text or "{}")
     return result
 
 
@@ -151,7 +151,7 @@ def evaluate_desirability(job_req_text: str, preferences: dict[str, str]) -> dic
         ),
     )
 
-    result: dict[str, Any] = json.loads(response.text)
+    result: dict[str, Any] = json.loads(response.text or "{}")
     return result
 
 
@@ -316,7 +316,7 @@ def generate_collateral(
     )
 
     # 4. Parse the Response & Generate Filename Prefix
-    gemini_output: dict[str, Any] = json.loads(response.text)
+    gemini_output: dict[str, Any] = json.loads(response.text or "{}")
 
     meta: dict[str, str] = gemini_output.get("job_metadata", {})
     company: str = clean_filename(meta.get("company_name", "UnknownCompany"))

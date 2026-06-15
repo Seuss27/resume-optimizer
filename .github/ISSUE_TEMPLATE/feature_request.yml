@@ -1,0 +1,56 @@
+name: Feature Request
+description: Suggest an idea, logic update, or enhancement for this project.
+title: "[FEATURE] "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### Thanks for contributing!
+        Please provide as much detail as possible so we can properly evaluate this request.
+
+  - type: checkboxes
+    id: pre-checks
+    attributes:
+      label: Pre-flight Checks
+      description: Please confirm you've done the following before submitting.
+      options:
+        - label: I have searched the existing issues to ensure this feature hasn't already been requested.
+          required: true
+        - label: I am running the latest version of the tool.
+          required: true
+
+  - type: textarea
+    id: problem-statement
+    attributes:
+      label: The Problem
+      description: Is your feature request related to a specific problem or limitation? Please describe it clearly.
+      placeholder: e.g., "When running the tool, I am unable to..." or "I'm always frustrated when..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: The Proposed Solution
+      description: Describe the solution or new behavior you'd like to see implemented. 
+      placeholder: e.g., "Add a new configuration parameter that allows..." or "Update the parsing logic to include..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Describe any alternative solutions, workarounds, or existing tools you've considered.
+      placeholder: e.g., "I could use an external script to do X, but having it native would be better because..."
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add any other context, configuration snippets, or screenshots about the feature request here.
+    validations:
+      required: false

@@ -1,0 +1,50 @@
+name: Bug Report
+description: Create a report to help us improve the system.
+title: "[BUG]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report! Please ensure you have checked the existing open issues before submitting.
+  - type: textarea
+    id: description
+    attributes:
+      label: Description of the Bug
+      description: Provide a clear and concise description of what the bug is.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this issue? 
+      placeholder: |
+        1. Run command '...'
+        2. Send payload '...'
+        3. See error
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Environment / Version
+      description: What version of Python, uv, or the Docker image are you running?
+      placeholder: e.g., Python 3.12.4, uv 0.1.39
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Logs or Tracebacks
+      description: Paste any relevant logs here. DO NOT paste plain text. Use the code block below.
+      render: shell
+    validations:
+      required: false
