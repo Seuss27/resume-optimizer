@@ -5,6 +5,7 @@ import json
 import os
 import re
 import sys
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -63,7 +64,9 @@ def load_prompt(prompt_filename: str) -> str:
 
 def validate_resume(job_req_text: str, resume_text: str) -> dict[str, Any]:
     """Validates the generated resume against the target job requisition via Gemini."""
-    ats_prompt: str = load_prompt("ats_prompt.txt")
+    raw_ats_prompt: str = load_prompt("ats_prompt.txt")
+    today: str = date.today().strftime("%B %d, %Y")
+    ats_prompt: str = f"SYSTEM DATE: Today is {today}.\n\n{raw_ats_prompt}"
     response_schema: dict[str, Any] = {
         "type": "OBJECT",
         "properties": {
@@ -196,6 +199,7 @@ def generate_collateral(
     preserve_markdown: bool = False,
     evaluate_job: bool = False,
     grouped_layout: bool = False,
+    master_mode: bool = False,
 ) -> None:
     """Generates tailored resume and cover letter content using Gemini and Pandoc.
 
@@ -205,6 +209,7 @@ def generate_collateral(
         preserve_markdown: If True, keeps the intermediate Markdown files.
         evaluate_job: If True, evaluates the job against personal preferences.
         grouped_layout: If True, uses the nested layout template.
+        master_mode: If True, generates a comprehensive resume and skips cover letter.
     """
     # 1. Load Local State
     master_data_path: Path = Path("master_data.json")
@@ -226,12 +231,17 @@ def generate_collateral(
         "Pref_Target_Benefits": contact_info.get("Pref_Target_Benefits", "N/A"),
     }
 
-    sys_prompt_path: Path = Path("system_prompt.txt")
+    prompt_file: str = "master_prompt.txt" if master_mode else "system_prompt.txt"
+    sys_prompt_path: Path = Path(prompt_file)
     if not sys_prompt_path.exists():
-        raise FileNotFoundError("system_prompt.txt is missing.")
+        raise FileNotFoundError(f"{prompt_file} is missing.")
 
     with sys_prompt_path.open("r", encoding="utf-8") as f:
         system_prompt: str = f.read()
+
+    if master_mode:
+        evaluate_job = False
+        validate = False
 
     # 2. Define the Schema (Now including job_metadata extraction)
     response_schema: dict[str, Any] = {
@@ -319,8 +329,8 @@ def generate_collateral(
     gemini_output: dict[str, Any] = json.loads(response.text or "{}")
 
     meta: dict[str, str] = gemini_output.get("job_metadata", {})
-    company: str = clean_filename(meta.get("company_name", "UnknownCompany"))
-    role: str = clean_filename(meta.get("role_title", "UnknownRole"))
+    company: str = clean_filename(meta.get("company_name", "Master" if master_mode else "Company"))
+    role: str = clean_filename(meta.get("role_title", "Resume" if master_mode else "Role"))
 
     prefix: str = f"{company}_{role}"
     logger.info("AI processing complete.", extra={"output_prefix": prefix})
@@ -330,7 +340,6 @@ def generate_collateral(
         loader=FileSystemLoader("."), autoescape=select_autoescape(["html", "xml"])
     )
     resume_template = env.get_template("resume_template.md")
-    cover_letter_template = env.get_template("cover_letter_template.md")
 
     resume_markdown: str = resume_template.render(
         contact=master_data.get("contact", {}),
@@ -342,10 +351,13 @@ def generate_collateral(
         grouped_layout=grouped_layout,
     )
 
-    cl_markdown: str = cover_letter_template.render(
-        contact=master_data.get("contact", {}),
-        cover_letter_body=gemini_output.get("cover_letter_body", ""),
-    )
+    cl_markdown: str = ""
+    if not master_mode:
+        cover_letter_template = env.get_template("cover_letter_template.md")
+        cl_markdown = cover_letter_template.render(
+            contact=master_data.get("contact", {}),
+            cover_letter_body=gemini_output.get("cover_letter_body", ""),
+        )
 
     if evaluate_job:
         eval_results: dict[str, Any] = evaluate_desirability(job_req_text, preferences)
@@ -405,13 +417,10 @@ def generate_collateral(
         )
 
     # 6. Compile Final Outputs
-    logger.info(
-        "Compiling final documents.",
-        extra={
-            "resume_file": f"{prefix}_Resume_{initials}.docx",
-            "cover_letter_file": f"{prefix}_CoverLetter_{initials}.docx",
-        },
-    )
+    expected_docs: dict[str, str] = {"resume_file": f"{prefix}_Resume_{initials}.docx"}
+    if not master_mode:
+        expected_docs["cover_letter_file"] = f"{prefix}_CoverLetter_{initials}.docx"
+    logger.info("Compiling final documents.", extra=expected_docs)
 
     # Ensure Pandoc is installed locally; if not, download it automatically
     try:
@@ -421,12 +430,15 @@ def generate_collateral(
         pypandoc.download_pandoc()
 
     temp_resume: Path = Path("temp_resume.md")
-    temp_cl: Path = Path("temp_cl.md")
 
     with temp_resume.open("w", encoding="utf-8") as f:
         f.write(resume_markdown)
-    with temp_cl.open("w", encoding="utf-8") as f:
-        f.write(cl_markdown)
+
+    temp_cl: Path | None = None
+    if not master_mode:
+        temp_cl = Path("temp_cl.md")
+        with temp_cl.open("w", encoding="utf-8") as f:
+            f.write(cl_markdown)
 
     # Convert to DOCX
     pypandoc.convert_file(
@@ -435,20 +447,23 @@ def generate_collateral(
         outputfile=f"{prefix}_Resume_{initials}.docx",
         extra_args=["--reference-doc=resume_reference.docx"],
     )
-    pypandoc.convert_file(
-        str(temp_cl),
-        "docx",
-        outputfile=f"{prefix}_CoverLetter_{initials}.docx",
-    )
+
+    if not master_mode and temp_cl:
+        pypandoc.convert_file(
+            str(temp_cl),
+            "docx",
+            outputfile=f"{prefix}_CoverLetter_{initials}.docx",
+        )
 
     if not preserve_markdown:
         temp_resume.unlink()
-        temp_cl.unlink()
+        if not master_mode and temp_cl:
+            temp_cl.unlink()
     else:
-        logger.info(
-            "Preserving markdown files for template tuning.",
-            extra={"resume_md": str(temp_resume), "cover_letter_md": str(temp_cl)},
-        )
+        preserved: dict[str, str] = {"resume_md": str(temp_resume)}
+        if not master_mode and temp_cl:
+            preserved["cover_letter_md"] = str(temp_cl)
+        logger.info("Preserving markdown files for template tuning.", extra=preserved)
 
     logger.info("Successfully deployed generated files.")
 
@@ -493,6 +508,14 @@ def parse_args() -> argparse.Namespace:
             "Defaults to a flat chronological layout."
         ),
     )
+    parser.add_argument(
+        "--master",
+        action="store_true",
+        help=(
+            "Generates a full 'Master Resume' detailing all experience without filtering. "
+            "Bypasses job requisition prompts and skips cover letter generation."
+        ),
+    )
 
     return parser.parse_args()
 
@@ -500,6 +523,18 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     """Entry point to handle STDIN reading and initiate the resume pipeline."""
     args: argparse.Namespace = parse_args()
+
+    if args.master:
+        logger.info("Executing Master Resume generation. Bypassing STDIN requisition.")
+        generate_collateral(
+            job_req_text="MASTER RESUME GENERATION",
+            validate=args.validate,
+            preserve_markdown=args.preserve_markdown,
+            evaluate_job=args.score_job,
+            grouped_layout=args.grouped_layout,
+            master_mode=True,
+        )
+        return
 
     print("--- The JIT Resume Engine ---")
     print("Paste the target Job Requisition below.")
