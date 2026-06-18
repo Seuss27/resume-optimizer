@@ -835,9 +835,7 @@ def test_generate_collateral_master_mode_skips_cover_letter_and_validations(
     monkeypatch.setattr(generate, "evaluate_desirability", fail_if_called)
 
     # Intentionally trigger the flags, which should be ignored by the master_mode override
-    generate.generate_collateral(
-        "Bypass text", validate=True, evaluate_job=True, master_mode=True
-    )
+    generate.generate_collateral("Bypass text", validate=True, evaluate_job=True, master_mode=True)
 
     resume_output: Path = tmp_path / "Master_Resume_Resume_A.docx"
     cover_output: Path = tmp_path / "Master_Resume_CoverLetter_A.docx"
