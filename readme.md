@@ -14,6 +14,7 @@ When you find a job you want to apply for, the engine:
 4. **Optional Job Evaluation:** If run with `--score-job`, the original job req is evaluated against your personal preferences (`desirability_prompt.txt`), analyzing salary match, remote capabilities, and core pros/cons.
 5. **Injects & Renders:** The filtered data is injected into dedicated **Jinja2 Markdown templates** for both a resume and a cover letter. (The intermediate markdown files are cleanly removed unless `--preserve-markdown` is used).
 6. **Deploys:** **Pandoc** compiles the customized Markdown into two perfectly formatted Word documents, dynamically named based on the requisition (e.g., `AcmeCorp_BackendEngineer_Resume.docx`).
+7. **Master Mode:** If run with the `--master` flag, the engine bypasses the job requisition requirement, skips the cover letter, and generates a comprehensive, fully-compiled "Master Resume" containing all historical data from your state file.
 
 ## Prerequisites
 
@@ -101,6 +102,9 @@ hatch run generate
 
 # Optional: compile outputs, run ATS validation, evaluate job desirability, and preserve markdown files
 hatch run generate -- --validate --score-job --preserve-markdown
+
+# Generate a complete Master Resume without tailoring to a specific job (skips cover letter)
+hatch run generate -- --master
 ```
 
 ### If Using Standard Pip Entry Points (Option B)

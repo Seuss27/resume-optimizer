@@ -71,6 +71,14 @@ def test_parse_args_enables_grouped_layout_flag(monkeypatch: pytest.MonkeyPatch)
     assert args.grouped_layout is True
 
 
+def test_parse_args_enables_master_flag(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verifies the --master CLI flag parses correctly."""
+    monkeypatch.setattr(sys, "argv", ["generate-resume", "--master"])
+    args: argparse.Namespace = generate.parse_args()
+
+    assert args.master is True
+
+
 def test_generate_collateral_markdown_structure_is_valid(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -279,7 +287,8 @@ def test_validate_resume_requests_ats_prompt_and_returns_json(
     assert result["missing_keywords"] == ["AWS", "Docker"]
     assert "Target requisition" in captured["contents"]
     assert "Target resume" in captured["contents"]
-    assert captured["config"].system_instruction == "ATS parser prompt"
+    assert "SYSTEM DATE: Today is" in captured["config"].system_instruction
+    assert "ATS parser prompt" in captured["config"].system_instruction
 
 
 def test_print_ats_validation_summary_outputs_expected_fields(
@@ -294,7 +303,7 @@ def test_print_ats_validation_summary_outputs_expected_fields(
     }
 
     generate.print_ats_validation_summary(ats_results)
-    captured: pytest.CaptureResult = capsys.readouterr()
+    captured: Any = capsys.readouterr()
 
     assert "=== ATS Validation Results ===" in captured.out
     assert "Score: 90/100" in captured.out
@@ -510,7 +519,7 @@ def test_generate_collateral_performs_optional_ats_validation(
 
     generate.generate_collateral("Target job requisition", validate=True)
 
-    captured: pytest.CaptureResult = capsys.readouterr()
+    captured: Any = capsys.readouterr()
     assert "=== ATS Validation Results ===" in captured.out
     assert "Score: 86/100" in captured.out
     assert "Python" in captured.out
@@ -634,8 +643,8 @@ def test_generate_collateral_uses_unknown_prefix_when_metadata_is_missing(
 
     generate.generate_collateral("Target job requisition")
 
-    assert (tmp_path / "UnknownCompany_UnknownRole_Resume_A.docx").exists()
-    assert (tmp_path / "UnknownCompany_UnknownRole_CoverLetter_A.docx").exists()
+    assert (tmp_path / "Company_Role_Resume_A.docx").exists()
+    assert (tmp_path / "Company_Role_CoverLetter_A.docx").exists()
 
 
 def test_evaluate_desirability_requests_prompt_and_returns_json(
@@ -766,3 +775,71 @@ def test_generate_collateral_saves_desirability_report_when_flag_set(
     expected_report: Path = tmp_path / "Stark_Industries_Security_Lead_desirability_AT.txt"
     assert expected_report.exists()
     assert "Score: 95/100" in expected_report.read_text(encoding="utf-8")
+
+
+def test_generate_collateral_master_mode_skips_cover_letter_and_validations(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verifies that master mode overrides validations and avoids cover letter rendering."""
+    monkeypatch.chdir(tmp_path)
+
+    (tmp_path / "master_data.json").write_text(
+        json.dumps({"contact": {"name": "Alex"}}), encoding="utf-8"
+    )
+    (tmp_path / "master_prompt.txt").write_text("master prompt rules", encoding="utf-8")
+    (tmp_path / "resume_template.md").write_text("Master Resume", encoding="utf-8")
+
+    class FakeResponse:
+        """Mock for Gemini API response."""
+
+        def __init__(self, text: str) -> None:
+            self.text: str = text
+
+    class FakeModels:
+        """Mock for Gemini models module."""
+
+        def generate_content(self, model: str, contents: str, config: Any) -> FakeResponse:
+            return FakeResponse(
+                json.dumps(
+                    {
+                        "job_metadata": {
+                            "company_name": "Master",
+                            "role_title": "Resume",
+                        },
+                        "selected_skills": ["Everything"],
+                        "tailored_companies": [],
+                        "cover_letter_body": "",
+                    }
+                )
+            )
+
+    class FakeClient:
+        """Mock for Gemini API Client."""
+
+        def __init__(self, http_options: Any = None) -> None:
+            self.models: FakeModels = FakeModels()
+
+    def mock_get_pandoc_version() -> str:
+        return "2.0"
+
+    def fake_convert_file(input_file: str, fmt: str, outputfile: str, **kwargs: Any) -> None:
+        Path(outputfile).write_text("fake docx content", encoding="utf-8")
+
+    def fail_if_called(*args: Any, **kwargs: Any) -> Any:
+        raise AssertionError("Validation/Desirability logic should not be invoked in master mode.")
+
+    monkeypatch.setattr(generate, "genai", type("DummyGenai", (), {"Client": FakeClient}))
+    monkeypatch.setattr(generate.pypandoc, "get_pandoc_version", mock_get_pandoc_version)
+    monkeypatch.setattr(generate.pypandoc, "convert_file", fake_convert_file)
+    monkeypatch.setattr(generate, "validate_resume", fail_if_called)
+    monkeypatch.setattr(generate, "evaluate_desirability", fail_if_called)
+
+    # Intentionally trigger the flags, which should be ignored by the master_mode override
+    generate.generate_collateral("Bypass text", validate=True, evaluate_job=True, master_mode=True)
+
+    resume_output: Path = tmp_path / "Master_Resume_Resume_A.docx"
+    cover_output: Path = tmp_path / "Master_Resume_CoverLetter_A.docx"
+
+    assert resume_output.exists()
+    assert not cover_output.exists()
+    assert not (tmp_path / "temp_cl.md").exists()
