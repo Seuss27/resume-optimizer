@@ -15,6 +15,8 @@ from google import genai
 from google.genai import types
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
+from resume_optimizer.adapters import BedrockAdapter, GeminiAdapter, MockLLMAdapter
+from resume_optimizer.interfaces import LLMEngineInterface
 from resume_optimizer.logging_setup import get_logger
 
 logger = get_logger(__name__)
@@ -22,6 +24,28 @@ logger = get_logger(__name__)
 __version__ = "0.1.0"
 
 load_dotenv()
+
+
+def get_llm_engine(mock_data: list[dict[str, Any]] | None = None) -> LLMEngineInterface:
+    """Factory method to initialize the active LLM adapter via environment config."""
+    provider: str = os.getenv("LLM_PROVIDER", "gemini").lower()
+
+    if provider == "mock":
+        # Provides safe, offline execution for Pytest and GitHub Actions
+        return MockLLMAdapter(mock_responses=mock_data)
+
+    elif provider == "bedrock":
+        return BedrockAdapter(region_name=os.getenv("AWS_DEFAULT_REGION", "us-east-1"))
+
+    elif provider == "gemini":
+        api_key: str | None = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise ValueError("CRITICAL: GEMINI_API_KEY environment variable is required.")
+        return GeminiAdapter(api_key=api_key)
+
+    else:
+        raise ValueError(f"CRITICAL: Unsupported LLM_PROVIDER specified: {provider}")
+
 
 if not os.environ.get("GEMINI_API_KEY"):
     raise ValueError(
@@ -62,11 +86,14 @@ def load_prompt(prompt_filename: str) -> str:
         return f.read()
 
 
-def validate_resume(job_req_text: str, resume_text: str) -> dict[str, Any]:
-    """Validates the generated resume against the target job requisition via Gemini."""
+def validate_resume(
+    job_req_text: str, resume_text: str, llm_engine: LLMEngineInterface
+) -> dict[str, Any]:
+    """Validates the generated resume against the target job requisition."""
     raw_ats_prompt: str = load_prompt("ats_prompt.txt")
     today: str = date.today().strftime("%B %d, %Y")
     ats_prompt: str = f"SYSTEM DATE: Today is {today}.\n\n{raw_ats_prompt}"
+
     response_schema: dict[str, Any] = {
         "type": "OBJECT",
         "properties": {
@@ -77,29 +104,15 @@ def validate_resume(job_req_text: str, resume_text: str) -> dict[str, Any]:
         },
     }
 
-    http_options: types.HttpOptions = types.HttpOptions(
-        retry_options=types.HttpRetryOptions(
-            initial_delay=2.0,
-            attempts=5,
-            http_status_codes=[429, 500, 502, 503, 504],
-        )
-    )
-    client: genai.Client = genai.Client(http_options=http_options)
     user_prompt: str = f"Job Requisition:\n{job_req_text}\n\nGenerated Resume Text:\n{resume_text}"
 
-    logger.info("Initiating ATS validation Gemini API call.")
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=user_prompt,
-        config=types.GenerateContentConfig(
-            system_instruction=ats_prompt,
-            response_mime_type="application/json",
-            response_schema=response_schema,
-            temperature=0.2,
-        ),
+    # Delegate network operations to the injected interface
+    result: dict[str, Any] = llm_engine.generate_structured_content(
+        prompt=user_prompt,
+        response_schema=response_schema,
+        system_instruction=ats_prompt,
     )
 
-    result: dict[str, Any] = json.loads(response.text or "{}")
     return result
 
 
@@ -211,7 +224,10 @@ def generate_collateral(
         grouped_layout: If True, uses the nested layout template.
         master_mode: If True, generates a comprehensive resume and skips cover letter.
     """
-    # 1. Load Local State
+    # 1. Initialize our decoupled engine
+    llm_engine: LLMEngineInterface = get_llm_engine()
+
+    # 2. Load Local State
     master_data_path: Path = Path("master_data.json")
     if not master_data_path.exists():
         raise FileNotFoundError("master_data.json is missing. Run the preprocessor script first.")
@@ -243,7 +259,7 @@ def generate_collateral(
         evaluate_job = False
         validate = False
 
-    # 2. Define the Schema (Now including job_metadata extraction)
+    # 3. Define the Schema (Now including job_metadata extraction)
     response_schema: dict[str, Any] = {
         "type": "OBJECT",
         "properties": {
@@ -301,32 +317,18 @@ def generate_collateral(
         },
     }
 
-    # 3. Call the API
-    http_options: types.HttpOptions = types.HttpOptions(
-        retry_options=types.HttpRetryOptions(
-            initial_delay=2.0,
-            attempts=5,
-            http_status_codes=[429, 500, 502, 503, 504],
-        )
-    )
-    client: genai.Client = genai.Client(http_options=http_options)
+    # 4. Call the API
+
     user_prompt: str = f"Job Req:\n{job_req_text}\n\nMaster Data:\n{json.dumps(master_data)}"
 
     logger.info("Initiating Gemini API call.")
 
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=user_prompt,
-        config=types.GenerateContentConfig(
-            system_instruction=system_prompt,
-            response_mime_type="application/json",
-            response_schema=response_schema,
-            temperature=0.2,
-        ),
+    # 5. Parse the Response & Generate Filename Prefix
+    gemini_output: dict[str, Any] = llm_engine.generate_structured_content(
+        prompt=user_prompt,
+        response_schema=response_schema,
+        system_instruction=system_prompt,
     )
-
-    # 4. Parse the Response & Generate Filename Prefix
-    gemini_output: dict[str, Any] = json.loads(response.text or "{}")
 
     meta: dict[str, str] = gemini_output.get("job_metadata", {})
     company: str = clean_filename(meta.get("company_name", "Master" if master_mode else "Company"))
@@ -389,7 +391,8 @@ def generate_collateral(
         )
 
     if validate:
-        ats_results: dict[str, Any] = validate_resume(job_req_text, resume_markdown)
+        ats_results: dict[str, Any] = validate_resume(job_req_text, resume_markdown, llm_engine)
+
         print_ats_validation_summary(ats_results)
 
         ats_file: Path = Path(f"{prefix}_ats_{initials}.txt")
