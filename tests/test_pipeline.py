@@ -1,33 +1,29 @@
+# tests/test_pipeline.py
 import json
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 
 from resume_optimizer.adapters import MockLLMAdapter
-from resume_optimizer.generate import generate_collateral
 
 
-@pytest.fixture
-def configure_mock_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Forces the application into the mock provider state."""
-    monkeypatch.setenv("LLM_PROVIDER", "mock")
-
-
-# Add tmp_path to your test arguments
+# Add the patch decorator targeting the pypandoc module INSIDE your generate.py file
+@patch("resume_optimizer.generate.pypandoc.convert_file")
 def test_resume_generation_pipeline_success(
-    configure_mock_env: None, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    mock_pandoc_convert,  # <-- Add the mock object to arguments
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     """Validates the core application flow using deterministic LLM outputs and isolated I/O."""
 
     # 1. Create an isolated, temporary master_data.json
     mock_data_path = tmp_path / "master_data.json"
-    
-    # Write minimal valid schema data to satisfy your core engine
     mock_master_data = {
         "contact": {"name": "Test Architect"},
         "skills": ["Python", "AWS", "Clean Architecture"],
-        "experience": []
+        "experience": [],
     }
     mock_data_path.write_text(json.dumps(mock_master_data))
 
@@ -48,7 +44,11 @@ def test_resume_generation_pipeline_success(
     )
 
     # 3. Run execution injecting the isolated test path
+    from resume_optimizer.generate import generate_collateral
+
     generate_collateral(
-        job_req_text="We need a Python expert for AWS microservices.",
-        data_path=mock_data_path  # <-- PASS THE TEMP PATH HERE
+        job_req_text="We need a Python expert for AWS microservices.", data_path=mock_data_path
     )
+
+    # 4. (Optional but recommended) Assert the boundary was crossed correctly
+    mock_pandoc_convert.assert_called()
