@@ -213,6 +213,7 @@ def generate_collateral(
     evaluate_job: bool = False,
     grouped_layout: bool = False,
     master_mode: bool = False,
+    data_path: str | Path = "master_data.json",
 ) -> None:
     """Generates tailored resume and cover letter content using Gemini and Pandoc.
 
@@ -228,7 +229,7 @@ def generate_collateral(
     llm_engine: LLMEngineInterface = get_llm_engine()
 
     # 2. Load Local State
-    master_data_path: Path = Path("master_data.json")
+    master_data_path: Path = Path(data_path)
     if not master_data_path.exists():
         raise FileNotFoundError("master_data.json is missing. Run the preprocessor script first.")
 
