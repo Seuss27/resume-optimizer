@@ -47,10 +47,10 @@ def get_llm_engine(mock_data: list[dict[str, Any]] | None = None) -> LLMEngineIn
         raise ValueError(f"CRITICAL: Unsupported LLM_PROVIDER specified: {provider}")
 
 
-if not os.environ.get("GEMINI_API_KEY"):
-    raise ValueError(
-        "CRITICAL: GEMINI_API_KEY not found. Please create a .env file and add your key."
-    )
+# if not os.environ.get("GEMINI_API_KEY"):
+#     raise ValueError(
+#         "CRITICAL: GEMINI_API_KEY not found. Please create a .env file and add your key."
+#     )
 
 
 def clean_filename(text: str | None) -> str:
