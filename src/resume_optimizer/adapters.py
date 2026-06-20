@@ -152,14 +152,18 @@ class MockLLMAdapter(LLMEngineInterface):
         if schema.get("type") == "OBJECT" and "properties" in schema:
             expected_keys = schema["properties"].keys()
             for key in expected_keys:
-                # If a property is required or assumed, verify its structural existence
+                # Differentiate between strict structural fields and optional arrays
+                is_optional = "Optional" in schema["properties"][key].get("description", "")
+
                 if key not in payload:
+                    if is_optional:
+                        continue
                     raise ValueError(
                         f"Contract Mismatch: Mock fixture is missing required key '{key}' "
                         f"defined in the expected schema definition."
                     )
 
-                # Recursive validation for nested objects (e.g., job_metadata)
+                # Recursive validation for nested objects
                 nested_schema = schema["properties"][key]
                 if nested_schema.get("type") == "OBJECT" and isinstance(payload[key], dict):
                     self._validate_schema(payload[key], nested_schema)

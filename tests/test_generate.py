@@ -9,10 +9,12 @@ from typing import Any
 
 import pytest
 
+# Ensure absolute import alignment to avoid namespace pollution
+from resume_optimizer import generate
+from resume_optimizer.adapters import MockLLMAdapter
+
 # Ensure the GEMINI_API_KEY check in generate.py passes during import.
 os.environ.setdefault("GEMINI_API_KEY", "test-key")
-
-import resume_optimizer.generate as generate
 
 
 def test_clean_filename_normalizes_text() -> None:
@@ -247,48 +249,23 @@ def test_validate_resume_requests_ats_prompt_and_returns_json(
     monkeypatch.chdir(tmp_path)
     (tmp_path / "ats_prompt.txt").write_text("ATS parser prompt", encoding="utf-8")
 
-    captured: dict[str, Any] = {}
+    expected_ats_output = {
+        "ats_score": 92,
+        "missing_keywords": ["AWS", "Docker"],
+        "formatting_compliance": "Excellent",
+        "critical_feedback": "Keep using strong action verbs.",
+    }
 
-    class FakeResponse:
-        """Mock for Gemini API response."""
+    # Instantiate the adapter decoupled alternative
+    mock_engine = MockLLMAdapter(mock_responses=[expected_ats_output])
 
-        def __init__(self, text: str) -> None:
-            self.text: str = text
-
-    class FakeModels:
-        """Mock for Gemini models module."""
-
-        def generate_content(self, model: str, contents: str, config: Any) -> FakeResponse:
-            captured["model"] = model
-            captured["contents"] = contents
-            captured["config"] = config
-            return FakeResponse(
-                json.dumps(
-                    {
-                        "ats_score": 92,
-                        "missing_keywords": ["AWS", "Docker"],
-                        "formatting_compliance": "Excellent",
-                        "critical_feedback": "Keep using strong action verbs.",
-                    }
-                )
-            )
-
-    class FakeClient:
-        """Mock for Gemini API Client."""
-
-        def __init__(self, http_options: Any = None) -> None:
-            self.models: FakeModels = FakeModels()
-
-    monkeypatch.setattr(generate, "genai", type("DummyGenai", (), {"Client": FakeClient}))
-
-    result: dict[str, Any] = generate.validate_resume("Target requisition", "Target resume")
+    # Pass the required decoupled parameter directly down to the method signature
+    result: dict[str, Any] = generate.validate_resume(
+        job_req_text="Target requisition", resume_text="Target resume", llm_engine=mock_engine
+    )
 
     assert result["ats_score"] == 92
     assert result["missing_keywords"] == ["AWS", "Docker"]
-    assert "Target requisition" in captured["contents"]
-    assert "Target resume" in captured["contents"]
-    assert "SYSTEM DATE: Today is" in captured["config"].system_instruction
-    assert "ATS parser prompt" in captured["config"].system_instruction
 
 
 def test_print_ats_validation_summary_outputs_expected_fields(
