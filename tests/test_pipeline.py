@@ -42,7 +42,7 @@ def test_resume_generation_pipeline_success(
     monkeypatch.setattr(
         "resume_optimizer.generate.get_llm_engine", lambda *args, **kwargs: mock_adapter
     )
-    
+
     # MOCK PANDOC VERSION TO PREVENT DOWNLOAD ATTEMPT
     monkeypatch.setattr("resume_optimizer.generate.pypandoc.get_pandoc_version", lambda: "2.0")
 
