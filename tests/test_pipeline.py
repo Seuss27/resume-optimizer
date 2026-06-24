@@ -43,6 +43,9 @@ def test_resume_generation_pipeline_success(
         "resume_optimizer.generate.get_llm_engine", lambda *args, **kwargs: mock_adapter
     )
 
+    # MOCK PANDOC VERSION TO PREVENT DOWNLOAD ATTEMPT
+    monkeypatch.setattr("resume_optimizer.generate.pypandoc.get_pandoc_version", lambda: "2.0")
+
     # 3. Run execution injecting the isolated test path
     from resume_optimizer.generate import generate_collateral
 
