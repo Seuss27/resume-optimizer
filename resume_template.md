@@ -1,7 +1,7 @@
 # {{ contact['Name'] }}
-{% if headline %}
+{% if headline or career_years %}
 
-**{{ headline }}**
+{% if headline %}**{{ headline }}**{% endif %}{% if headline and career_years %} | {% endif %}{% if career_years %}{{ career_years }} years of experience{% endif %}
 {% endif %}
 
 {{ [contact['Location'], contact['Email'], contact['Phone'], contact['LinkedIn']] | select | join(' | ') }}

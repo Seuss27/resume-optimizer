@@ -942,63 +942,14 @@ def test_career_years_is_none_when_it_cannot_be_trusted() -> None:
     assert generate.career_years(_roles("1906 - Present"), today) is None
 
 
-def test_provider_payload_carries_the_span_only_when_given() -> None:
-    """The span rides along with the career keys, and is absent when there is none."""
-    data: dict[str, Any] = {**_roles("2000 - Present"), "contact": SYNTHETIC_CONTACT}
-
-    assert generate.provider_payload(data, "25+")["career_years"] == "25+"
-    assert "career_years" not in generate.provider_payload(data)
-
-
-def test_without_career_span_blanks_only_the_sanctioned_phrase() -> None:
-    """Every other use of the same number is left for the check."""
-    text: str = "25+ years of experience. 25% faster, 25+ years of Kubernetes."
-
-    assert "years of experience" not in generate.without_career_span(text, "25+")
-    assert "25% faster" in generate.without_career_span(text, "25+")
-    assert "25+ years of Kubernetes" in generate.without_career_span(text, "25+")
-    assert generate.without_career_span(text, None) == text
-
-
-def test_without_career_span_is_exempt_only_as_a_whole_sentence() -> None:
-    """Anything after the phrase but a sentence end may tie the number to a skill, so it stays."""
-    for tied in (
-        "25+ years of experience in Python.",
-        "25+ years of experience with cloud teams.",
-        "**25+ years of experience** in Python.",
-        "(25+ years of experience) in Python.",
-        "25+ years of experience: Python.",
-        "25+ years of experience, all in Python.",
-        "Engineer with 25+ years of experience\nin Python.",
-        "25+ years of experience " + chr(0x2014) + " Python.",
-        "25+ years of experiences.",
-        "Engineer with 2,25+ years of experience.",
-        "Engineer with 1<b></b>25+ years of experience.",
-        "25+ years of experience. in Python.",
-        "25+ years of experience.  in Python.",
-    ):
-        assert generate.without_career_span(tied, "25+") == tied
-    for ended in (
-        "Engineer with 25+ years of experience.",
-        "Engineer with 25+ years of experience. Leads teams.",
-        "Engineer with 25+ years of experience!",
-        "Engineer with 25+ years of experience? Yes.",
-        "Cloud Architect | 25+ Years of Experience",
-        "Engineer with 25+ years of experience.  Leads teams.",
-        "25+ years of experience",
-    ):
-        blanked: str = generate.without_career_span(ended, "25+")
-        assert "years" not in blanked and "25" not in blanked
-        assert len(blanked) == len(ended)
-
-
-def test_summary_may_state_career_years_but_nothing_else_with_that_number(
+def test_career_years_is_written_by_code_and_a_model_years_claim_is_flagged(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """The code-computed span is exempt only as its own phrase, and it reaches the provider."""
-    monkeypatch.chdir(tmp_path)
+    """Code puts the span in the header. The model never sees it, and a years claim it writes
+    anyway is reported like any other unsupported number."""
     from datetime import date
 
+    monkeypatch.chdir(tmp_path)
     started: int = date.today().year - 30  # a span under the 60-year sanity limit, in any year
     data: dict[str, Any] = {
         "contact": SYNTHETIC_CONTACT,
@@ -1007,15 +958,23 @@ def test_summary_may_state_career_years_but_nothing_else_with_that_number(
     }
     (tmp_path / "master_data.json").write_text(json.dumps(data), encoding="utf-8")
     (tmp_path / "system_prompt.txt").write_text("system prompt", encoding="utf-8")
-    (tmp_path / "resume_template.md").write_text("Resume", encoding="utf-8")
+    (tmp_path / "resume_template.md").write_text(
+        "{{ headline }}|{{ career_years }} years of experience", encoding="utf-8"
+    )
     (tmp_path / "cover_letter_template.md").write_text("Letter", encoding="utf-8")
     span: str | None = generate.career_years(data)
     assert span is not None
     digits: str = span.rstrip("+")
+    captured: dict[str, str] = {}
+
+    def fake_convert(input_file: str, fmt: str, outputfile: str, **kwargs: Any) -> None:
+        captured[input_file] = Path(input_file).read_text(encoding="utf-8")
+        Path(outputfile).write_text("x", encoding="utf-8")
 
     def run(summary: str) -> tuple[str, MockLLMAdapter]:
         payload: dict[str, Any] = {
             "job_metadata": {"company_name": "Acme Inc", "role_title": "Developer"},
+            "headline": "Platform engineer",
             "professional_summary": summary,
             "selected_skills": [],
             "tailored_companies": [],
@@ -1024,19 +983,60 @@ def test_summary_may_state_career_years_but_nothing_else_with_that_number(
         adapter = MockLLMAdapter(mock_responses=[payload])
         monkeypatch.setattr("resume_optimizer.generate.get_llm_engine", lambda: adapter)
         monkeypatch.setattr(generate.pypandoc, "get_pandoc_version", lambda: "2.0")
-        monkeypatch.setattr(
-            generate.pypandoc,
-            "convert_file",
-            lambda input_file, fmt, outputfile, **kw: Path(outputfile).write_text("x"),
-        )
+        monkeypatch.setattr(generate.pypandoc, "convert_file", fake_convert)
         monkeypatch.setattr(generate, "page_count", lambda path: 1)
-        generate.generate_collateral("Target job requisition")
+        generate.generate_collateral("Target job requisition", preserve_markdown=True)
         return capsys.readouterr().out, adapter
 
-    out, adapter = run(f"Engineer with {span} years of experience.")
+    out, adapter = run("Engineer who cut costs.")
+    assert captured["temp_resume.md"] == f"Platform engineer|{span} years of experience"
+    assert "career_years" not in adapter.call_history[0]["prompt"]
+    assert span not in adapter.call_history[0]["prompt"]
     assert "Numbers: none" in out
-    assert f'"career_years": "{span}"' in adapter.call_history[0]["prompt"]
-    assert f"Numbers: {digits}" in run(f"Cut costs by {digits}%.")[0]
-    assert f"Numbers: {digits}" in run(f"Led {digits} engineers.")[0]
-    assert f"Numbers: {digits}" in run(f"{span} years of cloud work.")[0]
-    assert f"Numbers: {digits}" in run(f"Engineer with {span} years of experience in Python.")[0]
+    for claim in (
+        f"Leader with {span} years of experience.",
+        f"Leader with {span} years of experience in Python.",
+        f"{span} years of cloud work.",
+    ):
+        assert f"Numbers: {digits}" in run(claim)[0]
+
+
+def test_resume_and_letter_share_the_reference_document(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The letter gets the resume's margins and styles, and both stay sandboxed."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "master_data.json").write_text(
+        json.dumps({"contact": SYNTHETIC_CONTACT}), encoding="utf-8"
+    )
+    (tmp_path / "system_prompt.txt").write_text("system prompt", encoding="utf-8")
+    (tmp_path / "resume_template.md").write_text("Resume", encoding="utf-8")
+    (tmp_path / "cover_letter_template.md").write_text("Letter", encoding="utf-8")
+
+    calls: list[list[str]] = []
+
+    def fake_convert(input_file: str, fmt: str, outputfile: str, **kwargs: Any) -> None:
+        calls.append(kwargs["extra_args"])
+        Path(outputfile).write_text("x", encoding="utf-8")
+
+    payload: dict[str, Any] = {
+        "job_metadata": {"company_name": "Acme Inc", "role_title": "Developer"},
+        "professional_summary": "Engineer.",
+        "selected_skills": [],
+        "tailored_companies": [],
+        "cover_letter_body": "Hello.",
+    }
+    monkeypatch.setattr(
+        "resume_optimizer.generate.get_llm_engine",
+        lambda: MockLLMAdapter(mock_responses=[payload]),
+    )
+    monkeypatch.setattr(generate.pypandoc, "get_pandoc_version", lambda: "2.0")
+    monkeypatch.setattr(generate.pypandoc, "convert_file", fake_convert)
+    monkeypatch.setattr(generate, "page_count", lambda path: 1)
+
+    generate.generate_collateral("Target job requisition")
+
+    assert len(calls) == 2
+    for extra_args in calls:
+        assert "--reference-doc=resume_reference.docx" in extra_args
+        assert "--sandbox" in extra_args

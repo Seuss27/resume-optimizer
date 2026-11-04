@@ -411,45 +411,13 @@ def career_years(master_data: dict[str, Any], today: date | None = None) -> str 
     return f"{span // 5 * 5 if span >= 10 else span}+"
 
 
-def without_career_span(text: str, span: str | None) -> str:
-    """Blanks the one phrase that may state the span, "<span> years of experience".
-
-    Code computed the span, so that exact phrase is not a claim to check. Any other use of the
-    same number, such as a percentage or "25+ years of Kubernetes", stays for the check.
-
-    Accepted limits, left to D3's reviewer role because no pattern can judge them: a skill named
-    before the phrase in the same sentence ("Python engineer with 25+ years of experience.") and
-    a new sentence that follows ("... experience. In Python, led teams."). The prompts ask for
-    the phrase to end its sentence, and the exemption is also applied to bullets.
-    """
-    if not span:
-        return text
-    # The span must start at whitespace or the text start, as the number check reads digits, so
-    # "2,25+" or "1<b></b>25+" cannot hide a longer number. It must end its sentence: a full
-    # stop, "!" or "?" must follow, then the text ends or a non-lower-case, non-space character
-    # comes after the whitespace. Bold or bracket closers, commas, colons and line breaks are not
-    # sentence ends, because the sentence may go on. The blank is lower-case filler, so it adds
-    # no number or capitalised token.
-    pattern: str = (
-        rf"(?<!\S){re.escape(span)}\s+years\s+of\s+experience"
-        r"(?=\Z|[.!?](?:\Z|\s+\Z|\s+(?!(?-i:[a-z])|\s)))"
-    )
-    return re.sub(pattern, lambda match: "x" * len(match.group(0)), text, flags=re.IGNORECASE)
-
-
-def provider_payload(master_data: dict[str, Any], span: str | None = None) -> dict[str, Any]:
+def provider_payload(master_data: dict[str, Any]) -> dict[str, Any]:
     """Returns the career data the generation call sends: an allowlist of career keys.
 
     The contact block (name, email, phone, location, profile link) is never in it. Code renders
-    the header and the letter frame from that block locally (`RO-D13`). `span`, the
-    `career_years` result, is added as a key when given.
+    the header and the letter frame from that block locally (`RO-D13`).
     """
-    payload: dict[str, Any] = {
-        key: master_data[key] for key in PROVIDER_CAREER_KEYS if key in master_data
-    }
-    if span:
-        payload["career_years"] = span
-    return payload
+    return {key: master_data[key] for key in PROVIDER_CAREER_KEYS if key in master_data}
 
 
 # Stand-in contact block for the ATS pass: it keeps the header's shape and sends nothing real.
@@ -601,10 +569,10 @@ def generate_collateral(
         },
     }
 
-    # 4. Call the API. Code computes the career span once; the same value is sent and checked.
+    # 4. Call the API. Code computes the career span; it goes in the header, never to the model.
     span: str | None = career_years(master_data)
 
-    sent_data: str = json.dumps(provider_payload(master_data, span))
+    sent_data: str = json.dumps(provider_payload(master_data))
     user_prompt: str = f"Job Req:\n{job_req_text}\n\nMaster Data:\n{sent_data}"
 
     logger.info("Initiating Gemini API call.")
@@ -634,6 +602,7 @@ def generate_collateral(
         return resume_template.render(
             contact=contact,
             headline=gemini_output.get("headline", ""),
+            career_years=span or "",
             professional_summary=gemini_output.get("professional_summary", ""),
             skills_list=gemini_output.get("selected_skills", []),
             experience=gemini_output.get("tailored_companies", []),
@@ -757,7 +726,7 @@ def generate_collateral(
             "docx",
             outputfile=f"{prefix}_CoverLetter_{initials}.docx",
             format=PANDOC_INPUT_FORMAT,
-            extra_args=PANDOC_SAFETY_ARGS,
+            extra_args=["--reference-doc=resume_reference.docx", *PANDOC_SAFETY_ARGS],
         )
 
     if not preserve_markdown:
@@ -781,8 +750,6 @@ def generate_collateral(
     # 7. Deterministic checks on the output (no LLM): unsupported terms and real page counts
     # Only the req itself counts as "from req". The model wrote job_metadata, so it is not a source.
     prose, labels, titles = collect_output_segments(gemini_output)
-    # Only the exact phrase "<span> years of experience" is exempt: code computed that figure.
-    prose = [without_career_span(text, span) for text in prose]
     report: UnsupportedReport = check_unsupported(
         prose, master_data, job_req_text, labels=labels, titles=titles
     )
