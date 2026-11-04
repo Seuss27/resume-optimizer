@@ -1,6 +1,8 @@
 """Shared pytest fixtures that keep the suite from touching the repo root (plan task A1)."""
 
 import os
+import subprocess
+import types
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -82,6 +84,25 @@ def run_in_tmp_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """
     monkeypatch.chdir(tmp_path)
     return tmp_path
+
+
+@pytest.fixture(autouse=True)
+def no_real_converters(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Stops any test from launching Word or LibreOffice. Render tests install their own stub."""
+
+    def refuse(*args: object, **kwargs: object) -> None:
+        raise OSError("tests never run a real converter")
+
+    shim = types.SimpleNamespace(
+        run=refuse,
+        DEVNULL=subprocess.DEVNULL,
+        SubprocessError=subprocess.SubprocessError,
+    )
+    monkeypatch.setattr("resume_optimizer.render.subprocess", shim)
+    # Pipeline tests write placeholder files named .docx. The real scan is tested in
+    # test_render_safety.py and in the tests that opt back in.
+    monkeypatch.setattr("resume_optimizer.generate.scan_for_active_content", lambda path: [])
+    monkeypatch.setattr("resume_optimizer.generate.page_count", lambda path: 1)
 
 
 @pytest.fixture(autouse=True, scope="session")

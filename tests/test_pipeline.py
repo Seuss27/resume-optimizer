@@ -15,6 +15,7 @@ def test_resume_generation_pipeline_success(
     mock_pandoc_convert,  # <-- Add the mock object to arguments
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Validates the core application flow using deterministic LLM outputs and isolated I/O."""
 
@@ -54,6 +55,9 @@ def test_resume_generation_pipeline_success(
     # MOCK PANDOC VERSION TO PREVENT DOWNLOAD ATTEMPT
     monkeypatch.setattr("resume_optimizer.generate.pypandoc.get_pandoc_version", lambda: "2.0")
 
+    # Never convert a real document: stand in for Word and LibreOffice.
+    monkeypatch.setattr("resume_optimizer.generate.page_count", lambda path: 2)
+
     # 3. Run execution injecting the isolated test path
     from resume_optimizer.generate import generate_collateral
 
@@ -63,3 +67,14 @@ def test_resume_generation_pipeline_success(
 
     # 4. (Optional but recommended) Assert the boundary was crossed correctly
     mock_pandoc_convert.assert_called()
+
+    # 5. The deterministic report and the real page counts are printed
+    out: str = capsys.readouterr().out
+    assert "Unsupported-Term Report" in out
+    assert "Resume: 2 page(s)" in out
+    assert "Cover letter: 2 page(s)" in out
+
+    # 6. Pandoc is sandboxed and cannot pass raw OOXML through
+    for call in mock_pandoc_convert.call_args_list:
+        assert call.kwargs["format"] == "markdown-raw_attribute-yaml_metadata_block"
+        assert "--sandbox" in call.kwargs["extra_args"]

@@ -19,7 +19,7 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
     "Operating System :: OS Independent",
 ]
-dependencies = ["google-genai", "Jinja2", "pandas", "pypandoc", "python-dotenv", "boto3"]
+dependencies = ["google-genai", "Jinja2", "pandas", "pypandoc", "python-dotenv", "boto3", "docx2pdf", "pypdf"]
 
 [project.urls]
 Repository = "https://github.com/Seuss27/resume-optimizer"

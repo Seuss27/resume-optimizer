@@ -8,6 +8,9 @@ master_data.json
 *.pdf
 output_resume.md
 *.docx
+~$*
+temp_*.md
+.~lock.*#
 *.log
 *.txt
 

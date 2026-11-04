@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import logging
 import os
 import re
 import sys
@@ -16,14 +17,57 @@ from google.genai import types
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from resume_optimizer.adapters import BedrockAdapter, GeminiAdapter, MockLLMAdapter
+from resume_optimizer.checks import UnsupportedReport, check_unsupported
 from resume_optimizer.interfaces import LLMEngineInterface
 from resume_optimizer.logging_setup import get_logger
+from resume_optimizer.render import (
+    DocumentRefusedError,
+    PdfConversionError,
+    page_count,
+    scan_for_active_content,
+)
 
 logger = get_logger(__name__)
+
+
+class _CountingHandler(logging.Handler):
+    """Counts records without keeping or writing their text."""
+
+    def __init__(self) -> None:
+        super().__init__(level=logging.WARNING)
+        self.count: int = 0
+
+    def emit(self, record: logging.LogRecord) -> None:
+        """Counts one record."""
+        self.count += 1
+
+
+# pypandoc forwards pandoc's warnings, which quote document text and model-written URLs, to the
+# root log handlers. Rule 4: logs carry IDs and scores, never resume text. So the pypandoc logger
+# stops propagating, and only a count of what pandoc complained about is logged.
+PANDOC_WARNINGS: _CountingHandler = _CountingHandler()
+_pypandoc_logger: logging.Logger = logging.getLogger("pypandoc")
+_pypandoc_logger.setLevel(logging.WARNING)
+_pypandoc_logger.propagate = False
+_pypandoc_logger.addHandler(PANDOC_WARNINGS)
+
+
+class RefusedDocumentError(RuntimeError):
+    """A generated document contained content the model should not have produced."""
+
 
 __version__ = "0.1.0"
 
 load_dotenv()
+
+# Model text reaches pandoc as Markdown. Raw attributes would let it pass raw OOXML (field codes,
+# external includes) straight into the .docx, and a YAML block in the text would write hidden
+# document properties (and can ask for a TOC field), so both are switched off.
+PANDOC_INPUT_FORMAT: str = "markdown-raw_attribute-yaml_metadata_block"
+
+# --sandbox stops pandoc reading local files or fetching URLs for model-written Markdown such as
+# an image link, which would otherwise embed the file (a `.env`, say) in the deliverable.
+PANDOC_SAFETY_ARGS: list[str] = ["--sandbox"]
 
 
 def get_llm_engine(mock_data: list[dict[str, Any]] | None = None) -> LLMEngineInterface:
@@ -204,6 +248,103 @@ def print_ats_validation_summary(ats_results: dict[str, Any]) -> None:
     print(f"Critical feedback: {ats_results.get('critical_feedback', 'N/A')}")
     print("\nRaw ATS JSON:")
     print(json.dumps(ats_results, indent=2))
+
+
+def collect_output_segments(output: dict[str, Any]) -> tuple[list[str], list[str], list[str]]:
+    """Splits the generated fields into slots for the unsupported check.
+
+    Returns:
+        (prose, labels, titles). Prose is the summary, bullets and letter body. Labels are the
+        other names: skills, certifications, employers, dates, degrees and institutions. Titles
+        are the role titles.
+    """
+    prose: list[str] = [str(output.get("professional_summary") or "")]
+    labels: list[str] = []
+    titles: list[str] = []
+    for key in ("selected_skills", "selected_certifications"):
+        labels.extend(str(item) for item in output.get(key) or [])
+    for company in output.get("tailored_companies") or []:
+        labels.extend([str(company.get("company") or ""), str(company.get("dates") or "")])
+        for role in company.get("roles") or []:
+            titles.append(str(role.get("title") or ""))
+            labels.append(str(role.get("dates") or ""))
+            prose.extend(str(bullet) for bullet in role.get("bullets") or [])
+    for edu in output.get("selected_education") or []:
+        labels.extend(str(edu.get(k) or "") for k in ("degree", "institution", "year"))
+    prose.append(str(output.get("cover_letter_body") or ""))
+    return prose, labels, titles
+
+
+def print_unsupported_report(report: UnsupportedReport) -> None:
+    """Prints the unsupported-term report and the AI-tell count to the console."""
+    print("\n=== Unsupported-Term Report (not in your data) ===")
+    sections: list[tuple[str, list[str]]] = [
+        ("Vocabulary terms", report.terms),
+        ("Numbers", report.numbers),
+        ("Level words", report.levels),
+        ("Capitalised tokens", report.capitalised),
+    ]
+    for label, items in sections:
+        print(f"{label}: {', '.join(items) if items else 'none'}")
+    print(f"From req (verify each is backed by your data): {', '.join(report.from_req) or 'none'}")
+    tells: str = ", ".join(f"{p} x{n}" for p, n in report.ai_tells.items()) or "none"
+    print(f"AI-tell phrases ({report.ai_tell_total}): {tells}")
+    print("==================================================\n")
+
+
+def _set_aside(label: str, path: Path) -> None:
+    """Renames a refused document to `*.REFUSED.docx` and tells the user not to send it."""
+    quarantined: Path = path.with_name(f"{path.stem}.REFUSED{path.suffix}")
+    try:
+        path.replace(quarantined)
+        where: str = f"It was renamed to {quarantined.name}."
+    except OSError:
+        where = "It could not be renamed, so move it aside yourself."
+    print(
+        f"WARNING: do not open or send the {label.lower()}. It contains content "
+        f"the model should not have produced, or it could not be checked. {where}"
+    )
+
+
+def print_page_counts(documents: dict[str, Path]) -> list[str]:
+    """Checks every document, then prints each one's real page count, or why it cannot.
+
+    All documents are scanned and any refused one is set aside before a converter opens
+    anything, so an interrupted run never leaves an unchecked document under a sendable name.
+
+    Returns:
+        The labels of the documents that were refused.
+    """
+    refused: list[str] = []
+    for label, path in documents.items():
+        if not path.exists():
+            continue
+        try:
+            active: list[str] = scan_for_active_content(path)
+            if active:
+                raise DocumentRefusedError(f"refused: document contains {', '.join(active)}")
+        except DocumentRefusedError as exc:
+            logger.error("Document refused.", extra={"document": label, "reason": str(exc)})
+            print(f"{label}: page count unavailable ({exc}).")
+            refused.append(label)
+            _set_aside(label, path)
+    for label, path in documents.items():
+        if label in refused:
+            continue
+        try:
+            pages: int = page_count(path)
+        except DocumentRefusedError as exc:
+            logger.error("Document refused.", extra={"document": label, "reason": str(exc)})
+            print(f"{label}: page count unavailable ({exc}).")
+            refused.append(label)
+            _set_aside(label, path)
+        except PdfConversionError as exc:
+            logger.error("Page count unavailable.", extra={"document": label, "reason": str(exc)})
+            print(f"{label}: page count unavailable ({exc}); no estimate is given.")
+        else:
+            logger.info("Counted pages.", extra={"document": label, "pages": pages})
+            print(f"{label}: {pages} page(s)")
+    return refused
 
 
 def generate_collateral(
@@ -444,12 +585,14 @@ def generate_collateral(
         with temp_cl.open("w", encoding="utf-8") as f:
             f.write(cl_markdown)
 
+    PANDOC_WARNINGS.count = 0
     # Convert to DOCX
     pypandoc.convert_file(
         str(temp_resume),
         "docx",
         outputfile=f"{prefix}_Resume_{initials}.docx",
-        extra_args=["--reference-doc=resume_reference.docx"],
+        format=PANDOC_INPUT_FORMAT,
+        extra_args=["--reference-doc=resume_reference.docx", *PANDOC_SAFETY_ARGS],
     )
 
     if not master_mode and temp_cl:
@@ -457,6 +600,8 @@ def generate_collateral(
             str(temp_cl),
             "docx",
             outputfile=f"{prefix}_CoverLetter_{initials}.docx",
+            format=PANDOC_INPUT_FORMAT,
+            extra_args=PANDOC_SAFETY_ARGS,
         )
 
     if not preserve_markdown:
@@ -469,7 +614,37 @@ def generate_collateral(
             preserved["cover_letter_md"] = str(temp_cl)
         logger.info("Preserving markdown files for template tuning.", extra=preserved)
 
+    logger.info("Pandoc finished.", extra={"pandoc_warnings": PANDOC_WARNINGS.count})
+    if PANDOC_WARNINGS.count:
+        print(
+            f"Pandoc reported {PANDOC_WARNINGS.count} warning(s), for example a blocked image "
+            "or link. Check the output."
+        )
     logger.info("Successfully deployed generated files.")
+
+    # 7. Deterministic checks on the output (no LLM): unsupported terms and real page counts
+    # Only the req itself counts as "from req". The model wrote job_metadata, so it is not a source.
+    prose, labels, titles = collect_output_segments(gemini_output)
+    report: UnsupportedReport = check_unsupported(
+        prose, master_data, job_req_text, labels=labels, titles=titles
+    )
+    logger.info(
+        "Unsupported-term check complete.",
+        extra={
+            "unsupported": report.unsupported_count,
+            "from_req": len(report.from_req),
+            "ai_tells": report.ai_tell_total,
+        },
+    )
+    print_unsupported_report(report)
+    documents: dict[str, Path] = {"Resume": Path(expected_docs["resume_file"])}
+    if "cover_letter_file" in expected_docs:
+        documents["Cover letter"] = Path(expected_docs["cover_letter_file"])
+    refused: list[str] = print_page_counts(documents)
+    if refused:
+        raise RefusedDocumentError(
+            f"Refused: {', '.join(refused)}. Do not send them; see the warnings above."
+        )
 
 
 def parse_args() -> argparse.Namespace:
@@ -526,6 +701,16 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     """Entry point to handle STDIN reading and initiate the resume pipeline."""
+    try:
+        _main()
+    except RefusedDocumentError as exc:
+        logger.error("A generated document was refused.")
+        print(f"ERROR: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+
+def _main() -> None:
+    """Runs the pipeline for the parsed command line."""
     args: argparse.Namespace = parse_args()
 
     if args.master:
