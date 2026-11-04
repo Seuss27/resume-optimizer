@@ -154,7 +154,6 @@ repo rather than suppressing the rule.
 | Importing `generate.py` runs `load_dotenv()`, which reads the root `.env` (credentials, `LLM_PROVIDER`) into the test process — vs the rule that tests never read the repo root | B5 |
 | Unpinned dependencies; no SBOM, dependency audit, secrets scan, workflow lint or PR-title check — vs conventions and the glunk-works repos | B8 |
 | Generated outputs and personal CSVs in the root (git-ignored) — vs this file | B2 makes output paths configurable; C6 retires the CSVs and `master_data.json` |
-| `GEMINI.md` conflicts with this file (50-char subjects, `style`, Python 3.10); this file wins | B1 |
 | PRs target `main`, with no `develop` integration branch, as in claude-workbench | permanent (`pr_base: main`) |
 | Branch prefixes cover every commit type, not only `feat\|fix\|chore\|docs` | permanent |
 | No `sprint/NN-slug` branches: one `<type>/<issue#>-<slug>` branch per issue, with sprints as milestones | permanent; watch `ship` and `archive-sprint` for assumptions about `sprint/` branches |

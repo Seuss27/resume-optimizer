@@ -164,6 +164,8 @@ hatch run lint    # Validate style and security rules via ruff check
 hatch run format  # Apply automated codebase formatting via ruff format
 ```
 
+Contributor conventions (commits, branches, the no-fabrication rules) are in [CLAUDE.md](CLAUDE.md).
+
 ## Project Structure
 
 ```text
