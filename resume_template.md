@@ -1,6 +1,10 @@
 # {{ contact['Name'] }}
+{% if headline %}
 
-**Email:** {{ contact['Email'] }} | **LinkedIn:** {{ contact['LinkedIn'] }}
+**{{ headline }}**
+{% endif %}
+
+{{ [contact['Location'], contact['Email'], contact['Phone'], contact['LinkedIn']] | select | join(' | ') }}
 
 ---
 

@@ -157,7 +157,7 @@ repo rather than suppressing the rule.
 | PRs target `main`, with no `develop` integration branch, as in claude-workbench | permanent (`pr_base: main`) |
 | Branch prefixes cover every commit type, not only `feat\|fix\|chore\|docs` | permanent |
 | No `sprint/NN-slug` branches: one `<type>/<issue#>-<slug>` branch per issue, with sprints as milestones | permanent; watch `ship` and `archive-sprint` for assumptions about `sprint/` branches |
-| The legacy generator sends career data to the provider `LLM_PROVIDER` selects (Gemini by default), before `RO-D13`'s allowlist exists | A2 strips contact fields and waits on the tier check; F4 retires the path |
+| The legacy generator sends career data to the provider `LLM_PROVIDER` selects (Gemini by default), before `RO-D13`'s allowlist exists; the generation and ATS calls carry no contact block, but `--score-job` still sends the `Pref_*` preferences, always to Gemini | F4 retires the path |
 
 ## Load-bearing docs
 

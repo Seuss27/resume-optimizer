@@ -9,7 +9,7 @@ Instead of maintaining dozens of fragmented resume files, this project separates
 When you find a job you want to apply for, the engine:
 
 1. **Compiles State:** The `build_state.py` preprocessor merges your raw `experience.csv` and `profile.csv` into a single structured JSON state file.
-2. **Filters via AI:** The `generate.py` engine passes the Job Requisition and your state file to the **Gemini API**. The AI acts as a smart filter, returning only the most relevant skills and bullet points, while extracting the Company Name and Role Title.
+2. **Filters via AI:** The `generate.py` engine passes the Job Requisition and your career data, without the contact block, to the **Gemini API**. The AI acts as a smart filter, returning only the most relevant skills and bullet points, while extracting the Company Name and Role Title.
 3. **Optional ATS audit:** If run with `--validate`, the generated resume text is re-checked with a second Gemini review using `ats_prompt.txt`, producing a compatibility score, missing keyword list, and actionable feedback.
 4. **Optional Job Evaluation:** If run with `--score-job`, the original job req is evaluated against your personal preferences (`desirability_prompt.txt`), analyzing salary match, remote capabilities, and core pros/cons.
 5. **Injects & Renders:** The filtered data is injected into dedicated **Jinja2 Markdown templates** for both a resume and a cover letter. (The intermediate markdown files are cleanly removed unless `--preserve-markdown` is used).

@@ -57,9 +57,17 @@ def test_parse_args_defaults_preserve_markdown_to_false(monkeypatch: pytest.Monk
     assert args.preserve_markdown is False
 
 
-def test_parse_args_defaults_grouped_layout_to_false(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Validates the grouped layout configuration defaults to False."""
+def test_parse_args_defaults_grouped_layout_to_true(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Validates the grouped-by-employer layout is the default."""
     monkeypatch.setattr(sys, "argv", ["generate-resume"])
+    args: argparse.Namespace = generate.parse_args()
+
+    assert args.grouped_layout is True
+
+
+def test_parse_args_disables_grouped_layout_flag(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verifies --no-grouped-layout restores the flat chronological layout."""
+    monkeypatch.setattr(sys, "argv", ["generate-resume", "--no-grouped-layout"])
     args: argparse.Namespace = generate.parse_args()
 
     assert args.grouped_layout is False
@@ -152,7 +160,7 @@ def test_generate_collateral_markdown_structure_is_valid(
     monkeypatch.setattr(generate.pypandoc, "get_pandoc_version", mock_get_pandoc_version)
     monkeypatch.setattr(generate.pypandoc, "convert_file", mock_convert_file)
 
-    generate.generate_collateral("Target job requisition")
+    generate.generate_collateral("Target job requisition", grouped_layout=False)
 
     resume_md: str = captured_markdown["resume"]
     cover_letter_md: str = captured_markdown["cover_letter"]
@@ -670,3 +678,198 @@ def test_generate_collateral_master_mode_skips_cover_letter_and_validations(
     assert resume_output.exists()
     assert not cover_output.exists()
     assert not (tmp_path / "temp_cl.md").exists()
+
+
+SYNTHETIC_CONTACT: dict[str, str] = {
+    "Name": "Jane Doe",
+    "Email": "jane.doe@example.com",
+    "Phone": "555-0100",
+    "LinkedIn": "linkedin.com/in/janedoe",
+    "Location": "Seattle, WA",
+    "Pref_Min_Salary": "150k",
+}
+
+
+def test_provider_payload_is_an_allowlist_of_career_keys() -> None:
+    """Only the career keys go out. `contact` and any unknown key stay local."""
+    data: dict[str, Any] = {
+        "contact": SYNTHETIC_CONTACT,
+        "Contact": SYNTHETIC_CONTACT,
+        "profile": {"phone": "555-0100"},
+        "all_skills": ["Python"],
+        "companies": [],
+    }
+
+    assert generate.provider_payload(data) == {"all_skills": ["Python"], "companies": []}
+
+
+def test_name_stated_in_keeps_only_names_the_text_states() -> None:
+    """A hiring manager is kept only if the requisition states the name."""
+    req: str = "Questions go to  sam   LEE in talent."
+
+    assert generate.name_stated_in("Sam Lee", req) == "Sam Lee"
+    assert generate.name_stated_in("Pat Roe", req) == ""
+    assert generate.name_stated_in("", req) == ""
+    assert generate.name_stated_in(None, req) == ""
+    assert generate.name_stated_in("Ann", "strong annual planning skills") == ""
+
+
+def test_format_letter_date_has_no_zero_padded_day() -> None:
+    """The letter date reads like a business letter."""
+    from datetime import date
+
+    assert generate.format_letter_date(date(2026, 3, 5)) == "March 5, 2026"
+
+
+def test_no_contact_field_reaches_the_provider_payload(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """No contact value appears in the prompt or the system instruction sent to the provider."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "master_data.json").write_text(
+        json.dumps(
+            {
+                "contact": SYNTHETIC_CONTACT,
+                "all_skills": ["Python"],
+                "companies": [{"company": "Acme Inc", "roles": []}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (tmp_path / "system_prompt.txt").write_text("system prompt", encoding="utf-8")
+    # Templates that print the whole contact block, as the real ones do, so a leak would show.
+    (tmp_path / "resume_template.md").write_text(
+        "{{ contact['Name'] }} {{ contact['Email'] }} {{ contact['Phone'] }} "
+        "{{ contact['Location'] }} {{ contact['LinkedIn'] }}",
+        encoding="utf-8",
+    )
+    (tmp_path / "cover_letter_template.md").write_text("Letter", encoding="utf-8")
+    (tmp_path / "ats_prompt.txt").write_text("ats prompt", encoding="utf-8")
+
+    payload: dict[str, Any] = {
+        "job_metadata": {"company_name": "Acme Inc", "role_title": "Developer"},
+        "professional_summary": "Engineer.",
+        "selected_skills": ["Python"],
+        "tailored_companies": [],
+        "cover_letter_body": "Hello.",
+    }
+    ats_payload: dict[str, Any] = {
+        "ats_score": 90,
+        "missing_keywords": [],
+        "formatting_compliance": "ok",
+        "critical_feedback": "none",
+    }
+    mock_adapter = MockLLMAdapter(mock_responses=[payload, ats_payload])
+    monkeypatch.setattr("resume_optimizer.generate.get_llm_engine", lambda: mock_adapter)
+    monkeypatch.setattr(generate.pypandoc, "get_pandoc_version", lambda: "2.0")
+    monkeypatch.setattr(
+        generate.pypandoc,
+        "convert_file",
+        lambda input_file, fmt, outputfile, **kw: Path(outputfile).write_text("x"),
+    )
+    monkeypatch.setattr(generate, "page_count", lambda path: 1)
+
+    generate.generate_collateral("Target job requisition", validate=True)
+
+    assert len(mock_adapter.call_history) == 2  # generation and the ATS pass
+    sent: str = json.dumps(mock_adapter.call_history)
+    for value in SYNTHETIC_CONTACT.values():
+        assert value not in sent
+    assert "contact" not in mock_adapter.call_history[0]["prompt"]
+    assert "Acme Inc" in mock_adapter.call_history[0]["prompt"]
+
+
+def test_generate_collateral_renders_headline_and_letter_frame(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Code supplies the headline, location and the letter's date, addressee and Re: line."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "master_data.json").write_text(
+        json.dumps({"contact": SYNTHETIC_CONTACT}), encoding="utf-8"
+    )
+    (tmp_path / "system_prompt.txt").write_text("system prompt", encoding="utf-8")
+    (tmp_path / "resume_template.md").write_text(
+        "{{ contact['Name'] }}|{{ headline }}|{{ contact['Location'] }}", encoding="utf-8"
+    )
+    (tmp_path / "cover_letter_template.md").write_text(
+        "{{ letter_date }}|{{ hiring_manager }}|{{ company }}|Re: {{ role }}|{{ contact['Name'] }}",
+        encoding="utf-8",
+    )
+
+    captured: dict[str, str] = {}
+
+    def fake_convert(input_file: str, fmt: str, outputfile: str, **kwargs: Any) -> None:
+        captured[input_file] = Path(input_file).read_text(encoding="utf-8")
+        Path(outputfile).write_text("x", encoding="utf-8")
+
+    payload: dict[str, Any] = {
+        "job_metadata": {
+            "company_name": "Acme Inc",
+            "role_title": "Developer",
+            "hiring_manager": "Sam Lee",
+        },
+        "headline": "Platform engineer for regulated systems",
+        "professional_summary": "Engineer.",
+        "selected_skills": [],
+        "tailored_companies": [],
+        "cover_letter_body": "Hello.",
+    }
+    monkeypatch.setattr(
+        "resume_optimizer.generate.get_llm_engine",
+        lambda: MockLLMAdapter(mock_responses=[payload]),
+    )
+    monkeypatch.setattr(generate.pypandoc, "get_pandoc_version", lambda: "2.0")
+    monkeypatch.setattr(generate.pypandoc, "convert_file", fake_convert)
+    monkeypatch.setattr(generate, "page_count", lambda path: 1)
+    monkeypatch.setattr(generate, "format_letter_date", lambda today: "January 2, 2030")
+
+    generate.generate_collateral("Reach Sam Lee in talent.", preserve_markdown=True)
+
+    assert (
+        captured["temp_resume.md"] == "Jane Doe|Platform engineer for regulated systems|Seattle, WA"
+    )
+    assert captured["temp_cl.md"] == "January 2, 2030|Sam Lee|Acme Inc|Re: Developer|Jane Doe"
+
+
+def test_unstated_hiring_manager_is_dropped_from_the_letter(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A hiring manager the requisition does not name never reaches the letter."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "master_data.json").write_text(
+        json.dumps({"contact": SYNTHETIC_CONTACT}), encoding="utf-8"
+    )
+    (tmp_path / "system_prompt.txt").write_text("system prompt", encoding="utf-8")
+    (tmp_path / "resume_template.md").write_text("Resume", encoding="utf-8")
+    (tmp_path / "cover_letter_template.md").write_text(
+        "Dear {{ hiring_manager or 'Hiring Manager' }},", encoding="utf-8"
+    )
+
+    captured: dict[str, str] = {}
+
+    def fake_convert(input_file: str, fmt: str, outputfile: str, **kwargs: Any) -> None:
+        captured[input_file] = Path(input_file).read_text(encoding="utf-8")
+        Path(outputfile).write_text("x", encoding="utf-8")
+
+    payload: dict[str, Any] = {
+        "job_metadata": {
+            "company_name": "Acme Inc",
+            "role_title": "Developer",
+            "hiring_manager": "Invented Person",
+        },
+        "professional_summary": "Engineer.",
+        "selected_skills": [],
+        "tailored_companies": [],
+        "cover_letter_body": "Hello.",
+    }
+    monkeypatch.setattr(
+        "resume_optimizer.generate.get_llm_engine",
+        lambda: MockLLMAdapter(mock_responses=[payload]),
+    )
+    monkeypatch.setattr(generate.pypandoc, "get_pandoc_version", lambda: "2.0")
+    monkeypatch.setattr(generate.pypandoc, "convert_file", fake_convert)
+    monkeypatch.setattr(generate, "page_count", lambda path: 1)
+
+    generate.generate_collateral("A requisition that names nobody.", preserve_markdown=True)
+
+    assert captured["temp_cl.md"] == "Dear Hiring Manager,"
