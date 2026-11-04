@@ -6,17 +6,14 @@
 
 {{ letter_date }}
 
-{% if hiring_manager %}{{ hiring_manager }}
+{% if hiring_manager %}{{ hiring_manager }}\
+{% endif %}{% if company %}{{ company }}{% endif %}
 
-{% endif %}{% if company %}{{ company }}
+{% if role %}**Re: {{ role }}**
 
-{% endif %}{% if role %}**Re: {{ role }}**
-
-{% endif %}
-Dear {{ hiring_manager or 'Hiring Manager' }},
+{% endif %}Dear {{ hiring_manager or 'Hiring Manager' }},
 
 {{ cover_letter_body }}
 
-Sincerely,
-
+Sincerely,\
 {{ contact['Name'] }}
