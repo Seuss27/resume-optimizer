@@ -135,8 +135,9 @@ hatch run lint                 # ruff check .
 hatch run format --check       # ruff format --check
 ```
 
-`.github/workflows/ci.yml` runs the equivalent checks. It becomes the gate of record once F1's
-ruleset requires it.
+`.github/workflows/ci.yml` runs the equivalent checks, and it is the gate of record. The
+`main-required-checks` ruleset requires it, and `.ai/project.yml` mirrors that ruleset. B8
+aligns the CI and security jobs with the glunk-works repos.
 
 **Until A1 lands, `hatch run test` writes `temp_resume.md` and `temp_cl.md` into the CWD and
 then deletes them.** Run it from a checkout with no preserved run output, or move those files
@@ -151,7 +152,7 @@ repo rather than suppressing the rule.
 |---|---|
 | `requires-python >=3.10`, ruff target `py310`, rules `E,F,I,S` (no `B`), CI on 3.12–3.14; the target is 3.14 (3.15 advisory) — vs conventions and the target | B3 |
 | Credentials from `.env` / plain env vars, not the keyring — vs conventions | B5 |
-| Unpinned dependencies, no SBOM — vs conventions | F2 |
+| Unpinned dependencies; no SBOM, dependency audit, secrets scan, workflow lint or PR-title check — vs conventions and the glunk-works repos | B8 |
 | Tests not isolated from the repo root — vs this file | A1 |
 | Generated outputs and personal CSVs in the root (git-ignored) — vs this file | B2 makes paths configurable; the maintainer moves existing files; C6 retires the CSVs |
 | `GEMINI.md` conflicts with this file (50-char subjects, `style`, Python 3.10); this file wins | B1 |
