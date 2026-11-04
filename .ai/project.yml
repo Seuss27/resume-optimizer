@@ -52,8 +52,7 @@ code_paths:
   - tune_template.py
 
 # ── the local green gate ─────────────────────────────────────────────────────
-# A local pre-check; CI on the PR is the gate of record. Until A1 (#30) lands, the test step
-# writes and deletes temp_resume.md / temp_cl.md in the repo root (CLAUDE.md, green gate).
+# A local pre-check; CI on the PR is the gate of record.
 gates:
   green:
     - { run: hatch run test }

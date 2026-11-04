@@ -27,6 +27,14 @@ def test_resume_generation_pipeline_success(
     }
     mock_data_path.write_text(json.dumps(mock_master_data))
 
+    # The pipeline reads its prompt and templates from the working directory (tmp_path under
+    # the autouse fixture in conftest.py), so supply minimal stand-ins rather than repo files.
+    (tmp_path / "system_prompt.txt").write_text("system prompt", encoding="utf-8")
+    (tmp_path / "resume_template.md").write_text("Resume {{ contact.name }}", encoding="utf-8")
+    (tmp_path / "cover_letter_template.md").write_text(
+        "Dear Hiring,\n{{ cover_letter_body }}", encoding="utf-8"
+    )
+
     # 2. Setup the LLM Mock
     expected_payload: dict[str, Any] = {
         "job_metadata": {"company_name": "Acme Corp", "role_title": "Backend Engineer"},
