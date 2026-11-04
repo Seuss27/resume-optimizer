@@ -873,3 +873,170 @@ def test_unstated_hiring_manager_is_dropped_from_the_letter(
     generate.generate_collateral("A requisition that names nobody.", preserve_markdown=True)
 
     assert captured["temp_cl.md"] == "Dear Hiring Manager,"
+
+
+def _roles(*dates: str) -> dict[str, Any]:
+    """Master data with one role per dates string."""
+    roles = [{"title": "T", "dates": d} for d in dates]
+    return {"companies": [{"company": "Acme Inc", "roles": roles}]}
+
+
+def test_career_years_is_a_floor_from_the_earliest_year() -> None:
+    """The span is floored: a year is taken off, then it rounds down to a multiple of five."""
+    from datetime import date
+
+    today = date(2026, 1, 15)
+
+    assert generate.career_years(_roles("2000 - Present"), today) == "25+"
+    assert generate.career_years(_roles("2015 - 2019", "2010 - Present"), today) == "15+"
+    assert generate.career_years(_roles("2016 - Present"), today) == "9+"
+    assert generate.career_years(_roles("2020 - Present"), today) == "5+"
+
+
+def test_career_years_ends_at_the_last_year_unless_a_role_is_current() -> None:
+    """A career that ended years ago is not counted up to today."""
+    from datetime import date
+
+    today = date(2026, 11, 4)
+
+    assert generate.career_years(_roles("2000 - 2015"), today) == "10+"
+    assert generate.career_years(_roles("2000 - Now"), today) == "25+"
+    assert generate.career_years(_roles("Jan 2000 - Present"), today) == "25+"
+    assert generate.career_years(_roles("Sept. 2000 - Present"), today) == "25+"
+    assert generate.career_years(_roles("January 2000 - September 2010"), today) == "9+"
+    assert generate.career_years(_roles("2000 to Present"), today) == "25+"
+    assert generate.career_years(_roles("2008"), today) is None
+    assert generate.career_years(_roles("2000", "2008"), today) == "7+"
+    assert generate.career_years(_roles("2000 - 2015", "2020 - current"), today) == "25+"
+
+
+def test_career_years_skips_fields_that_are_not_plain_date_ranges() -> None:
+    """A stray year or a remark in a dates field makes it unreadable, so it is skipped."""
+    from datetime import date
+
+    today = date(2026, 11, 4)
+
+    assert generate.career_years(_roles("2015 - Present (founded 1990)"), today) is None
+    assert generate.career_years(_roles("2005 - 2010 (firm now defunct)"), today) is None
+    assert generate.career_years(_roles("2010 - 2015 (rehired 2024)"), today) is None
+    # a leading word that is not a month is not a date
+    assert generate.career_years(_roles("Founded 1990 - Present"), today) is None
+    assert generate.career_years(_roles("Est. 1990"), today) is None
+    # a year in the future is a typo, so the whole field is skipped, not clamped
+    assert generate.career_years(_roles("2000 - 2052"), today) is None
+    assert generate.career_years(_roles("2000 - 2010", "2020 - 2052"), today) == "9+"
+    # a skipped current role can only shorten the span
+    assert generate.career_years(_roles("2000 - 2010", "2019 - Present (remote)"), today) == "9+"
+
+
+def test_career_years_is_none_when_it_cannot_be_trusted() -> None:
+    """No year, no companies, a span under a year or an absurd span gives nothing."""
+    from datetime import date
+
+    today = date(2026, 11, 4)
+
+    assert generate.career_years({}, today) is None
+    assert generate.career_years({"companies": ["not a dict"]}, today) is None
+    assert generate.career_years(_roles("Present", ""), today) is None
+    assert generate.career_years(_roles("2026 - Present"), today) is None
+    assert generate.career_years(_roles("1906 - Present"), today) is None
+
+
+def test_provider_payload_carries_the_span_only_when_given() -> None:
+    """The span rides along with the career keys, and is absent when there is none."""
+    data: dict[str, Any] = {**_roles("2000 - Present"), "contact": SYNTHETIC_CONTACT}
+
+    assert generate.provider_payload(data, "25+")["career_years"] == "25+"
+    assert "career_years" not in generate.provider_payload(data)
+
+
+def test_without_career_span_blanks_only_the_sanctioned_phrase() -> None:
+    """Every other use of the same number is left for the check."""
+    text: str = "25+ years of experience. 25% faster, 25+ years of Kubernetes."
+
+    assert "years of experience" not in generate.without_career_span(text, "25+")
+    assert "25% faster" in generate.without_career_span(text, "25+")
+    assert "25+ years of Kubernetes" in generate.without_career_span(text, "25+")
+    assert generate.without_career_span(text, None) == text
+
+
+def test_without_career_span_is_exempt_only_as_a_whole_sentence() -> None:
+    """Anything after the phrase but a sentence end may tie the number to a skill, so it stays."""
+    for tied in (
+        "25+ years of experience in Python.",
+        "25+ years of experience with cloud teams.",
+        "**25+ years of experience** in Python.",
+        "(25+ years of experience) in Python.",
+        "25+ years of experience: Python.",
+        "25+ years of experience, all in Python.",
+        "Engineer with 25+ years of experience\nin Python.",
+        "25+ years of experience " + chr(0x2014) + " Python.",
+        "25+ years of experiences.",
+        "Engineer with 2,25+ years of experience.",
+        "Engineer with 1<b></b>25+ years of experience.",
+        "25+ years of experience. in Python.",
+        "25+ years of experience.  in Python.",
+    ):
+        assert generate.without_career_span(tied, "25+") == tied
+    for ended in (
+        "Engineer with 25+ years of experience.",
+        "Engineer with 25+ years of experience. Leads teams.",
+        "Engineer with 25+ years of experience!",
+        "Engineer with 25+ years of experience? Yes.",
+        "Cloud Architect | 25+ Years of Experience",
+        "Engineer with 25+ years of experience.  Leads teams.",
+        "25+ years of experience",
+    ):
+        blanked: str = generate.without_career_span(ended, "25+")
+        assert "years" not in blanked and "25" not in blanked
+        assert len(blanked) == len(ended)
+
+
+def test_summary_may_state_career_years_but_nothing_else_with_that_number(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The code-computed span is exempt only as its own phrase, and it reaches the provider."""
+    monkeypatch.chdir(tmp_path)
+    from datetime import date
+
+    started: int = date.today().year - 30  # a span under the 60-year sanity limit, in any year
+    data: dict[str, Any] = {
+        "contact": SYNTHETIC_CONTACT,
+        "all_skills": ["Python"],
+        **_roles(f"{started} - Present"),
+    }
+    (tmp_path / "master_data.json").write_text(json.dumps(data), encoding="utf-8")
+    (tmp_path / "system_prompt.txt").write_text("system prompt", encoding="utf-8")
+    (tmp_path / "resume_template.md").write_text("Resume", encoding="utf-8")
+    (tmp_path / "cover_letter_template.md").write_text("Letter", encoding="utf-8")
+    span: str | None = generate.career_years(data)
+    assert span is not None
+    digits: str = span.rstrip("+")
+
+    def run(summary: str) -> tuple[str, MockLLMAdapter]:
+        payload: dict[str, Any] = {
+            "job_metadata": {"company_name": "Acme Inc", "role_title": "Developer"},
+            "professional_summary": summary,
+            "selected_skills": [],
+            "tailored_companies": [],
+            "cover_letter_body": "Hello.",
+        }
+        adapter = MockLLMAdapter(mock_responses=[payload])
+        monkeypatch.setattr("resume_optimizer.generate.get_llm_engine", lambda: adapter)
+        monkeypatch.setattr(generate.pypandoc, "get_pandoc_version", lambda: "2.0")
+        monkeypatch.setattr(
+            generate.pypandoc,
+            "convert_file",
+            lambda input_file, fmt, outputfile, **kw: Path(outputfile).write_text("x"),
+        )
+        monkeypatch.setattr(generate, "page_count", lambda path: 1)
+        generate.generate_collateral("Target job requisition")
+        return capsys.readouterr().out, adapter
+
+    out, adapter = run(f"Engineer with {span} years of experience.")
+    assert "Numbers: none" in out
+    assert f'"career_years": "{span}"' in adapter.call_history[0]["prompt"]
+    assert f"Numbers: {digits}" in run(f"Cut costs by {digits}%.")[0]
+    assert f"Numbers: {digits}" in run(f"Led {digits} engineers.")[0]
+    assert f"Numbers: {digits}" in run(f"{span} years of cloud work.")[0]
+    assert f"Numbers: {digits}" in run(f"Engineer with {span} years of experience in Python.")[0]

@@ -7,7 +7,10 @@
   PR #82. The generation and ATS calls carry no contact block (`RO-D13`); `--score-job` still sends
   the `Pref_*` preferences to Gemini (CLAUDE.md Deviations row; F4 retires it).
 - Critic pass on #31: `architect`, `security-critic` and `docs-consistency`, 2 rounds, converged.
-  The last tightenings were applied after round 2 without a further round. No second-opinion round.
+  A later `career_years` change (code computes the career span; the A3 check exempts only the
+  phrase "<span> years of experience") then went through 5 rounds of `architect` and
+  `security-critic` and hit the cap; the maintainer chose to fix the last two small items without
+  another round. No second-opinion round.
 
 **Next:** the maintainer does the real-req comparison for #31 and merges PR #82. Then S01 has only
 #34 left (the owner's checklist), so run `/way-of-working:archive-sprint` when the maintainer calls

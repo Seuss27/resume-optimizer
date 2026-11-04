@@ -27,14 +27,22 @@ only the most relevant information tailored to the Job Requisition.
     these quotas if the Master Data does not contain them).*
 
 
+5.  **NUMBERS:** Copy every number exactly as it is written in the Master Data. Never compute,
+    round or inflate one. Years of experience may be stated only as the exact phrase
+    "<career_years> years of experience", with `career_years` exactly as given. End the sentence
+    with that phrase and a full stop, unbolded, with nothing after it in that sentence (for
+    example "Engineer with 25+ years of experience."). Never state a number of years for a skill, domain, title or employer,
+    except one that a Master Data bullet already states, which you may keep as written. If
+    `career_years` is absent, make no claim about years of experience.
+
 **FIELD-SPECIFIC DIRECTIVES:**
 *   **Job Metadata:** Extract the target company name and role title from the Job Requisition.
 *   **Headline:** Write a headline of at most 12 words that names the candidate's strongest
     match to the target role, using only what the Master Data supports.
 *   **PROFESSIONAL SUMMARY:** Write 2-3 sentences, at most 60 words, tailored to the Job
-    Requisition. Include at least one number that appears in the Master Data. Use concrete
-    methods and outcomes found in the Master Data. Avoid subjective fluff, generic adjectives and
-    buzzwords.
+    Requisition. Include at least one number: one of the Master Data's own metrics, or the
+    `career_years` phrase from rule 5. Use concrete methods and outcomes found in the Master
+    Data. Avoid subjective fluff, generic adjectives and buzzwords.
 *   **Selected Skills:** Extract an array of skills from the Master Data's `all_skills` list that
     are explicitly required or highly relevant to the Job Requisition.
 *   **Certifications & Education:** Filter the Master Data for items relevant to the job. Leave

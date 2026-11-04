@@ -354,13 +354,102 @@ def print_page_counts(documents: dict[str, Path]) -> list[str]:
 PROVIDER_CAREER_KEYS: tuple[str, ...] = ("all_skills", "companies", "certifications", "education")
 
 
-def provider_payload(master_data: dict[str, Any]) -> dict[str, Any]:
+# A role's dates are read only when the whole field has the shape of a date range such as
+# "2018 - Present" or "Jan 2018 - Mar 2021", or is a single year. A stray year in a note, or a
+# trailing remark after "Present", makes the field unreadable, and an unreadable field is skipped.
+_MONTH: str = (
+    r"(?:(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?"
+    r"|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?\s+|\d{1,2}/)?"
+)
+_YEAR_DIGITS: str = r"((?:19|20)\d{2})"
+_DATE_RANGE: re.Pattern[str] = re.compile(
+    rf"^\s*{_MONTH}{_YEAR_DIGITS}\s*(?:[-\u2013\u2014]|to)\s*"
+    rf"(?:{_MONTH}{_YEAR_DIGITS}|(present|current|now))\s*$",
+    re.IGNORECASE,
+)
+_SINGLE_YEAR: re.Pattern[str] = re.compile(rf"^\s*{_MONTH}{_YEAR_DIGITS}\s*$", re.IGNORECASE)
+
+
+def career_years(master_data: dict[str, Any], today: date | None = None) -> str | None:
+    """Returns the career span as a floor such as "25+", or None if it cannot be read.
+
+    The span runs from the earliest year in any readable role to the latest year found, or to
+    today's year when a role ends at Present, Current or Now. A role's dates are readable only
+    when the whole field is a date range or a single year (see `_DATE_RANGE`); anything else is
+    skipped, which can only shorten the span. The dates are read to the year, so one year is
+    taken off: the figure never overstates the span. From ten years up it is floored to a
+    multiple of five. A span over 60 years is taken as a typo and returns None. The span is
+    calendar time between the first and last role, so a gap between roles is counted.
+    Code computes it so the model never does its own arithmetic on dates.
+    """
+    this_year: int = (today or date.today()).year
+    years: list[int] = []
+    is_current: bool = False
+    for company in master_data.get("companies") or []:
+        if not isinstance(company, dict):
+            continue
+        for role in company.get("roles") or []:
+            dates: str = str(role.get("dates") or "") if isinstance(role, dict) else ""
+            found: list[int] = []
+            ends_now: bool = False
+            if range_match := _DATE_RANGE.match(dates):
+                start, stop, current = range_match.groups()
+                found = [int(start)] + ([int(stop)] if stop else [])
+                ends_now = current is not None
+            elif single_match := _SINGLE_YEAR.match(dates):
+                found = [int(single_match.group(1))]
+            if any(year > this_year for year in found):
+                continue  # a year in the future is a typo, so the whole field is unreadable
+            years.extend(found)
+            is_current = is_current or ends_now
+    if not years:
+        return None
+    end: int = this_year if is_current else max(years)
+    span: int = end - min(years) - 1
+    if span < 1 or span > 60:
+        return None
+    return f"{span // 5 * 5 if span >= 10 else span}+"
+
+
+def without_career_span(text: str, span: str | None) -> str:
+    """Blanks the one phrase that may state the span, "<span> years of experience".
+
+    Code computed the span, so that exact phrase is not a claim to check. Any other use of the
+    same number, such as a percentage or "25+ years of Kubernetes", stays for the check.
+
+    Accepted limits, left to D3's reviewer role because no pattern can judge them: a skill named
+    before the phrase in the same sentence ("Python engineer with 25+ years of experience.") and
+    a new sentence that follows ("... experience. In Python, led teams."). The prompts ask for
+    the phrase to end its sentence, and the exemption is also applied to bullets.
+    """
+    if not span:
+        return text
+    # The span must start at whitespace or the text start, as the number check reads digits, so
+    # "2,25+" or "1<b></b>25+" cannot hide a longer number. It must end its sentence: a full
+    # stop, "!" or "?" must follow, then the text ends or a non-lower-case, non-space character
+    # comes after the whitespace. Bold or bracket closers, commas, colons and line breaks are not
+    # sentence ends, because the sentence may go on. The blank is lower-case filler, so it adds
+    # no number or capitalised token.
+    pattern: str = (
+        rf"(?<!\S){re.escape(span)}\s+years\s+of\s+experience"
+        r"(?=\Z|[.!?](?:\Z|\s+\Z|\s+(?!(?-i:[a-z])|\s)))"
+    )
+    return re.sub(pattern, lambda match: "x" * len(match.group(0)), text, flags=re.IGNORECASE)
+
+
+def provider_payload(master_data: dict[str, Any], span: str | None = None) -> dict[str, Any]:
     """Returns the career data the generation call sends: an allowlist of career keys.
 
     The contact block (name, email, phone, location, profile link) is never in it. Code renders
-    the header and the letter frame from that block locally (`RO-D13`).
+    the header and the letter frame from that block locally (`RO-D13`). `span`, the
+    `career_years` result, is added as a key when given.
     """
-    return {key: master_data[key] for key in PROVIDER_CAREER_KEYS if key in master_data}
+    payload: dict[str, Any] = {
+        key: master_data[key] for key in PROVIDER_CAREER_KEYS if key in master_data
+    }
+    if span:
+        payload["career_years"] = span
+    return payload
 
 
 # Stand-in contact block for the ATS pass: it keeps the header's shape and sends nothing real.
@@ -512,11 +601,11 @@ def generate_collateral(
         },
     }
 
-    # 4. Call the API
+    # 4. Call the API. Code computes the career span once; the same value is sent and checked.
+    span: str | None = career_years(master_data)
 
-    user_prompt: str = (
-        f"Job Req:\n{job_req_text}\n\nMaster Data:\n{json.dumps(provider_payload(master_data))}"
-    )
+    sent_data: str = json.dumps(provider_payload(master_data, span))
+    user_prompt: str = f"Job Req:\n{job_req_text}\n\nMaster Data:\n{sent_data}"
 
     logger.info("Initiating Gemini API call.")
 
@@ -692,6 +781,8 @@ def generate_collateral(
     # 7. Deterministic checks on the output (no LLM): unsupported terms and real page counts
     # Only the req itself counts as "from req". The model wrote job_metadata, so it is not a source.
     prose, labels, titles = collect_output_segments(gemini_output)
+    # Only the exact phrase "<span> years of experience" is exempt: code computed that figure.
+    prose = [without_career_span(text, span) for text in prose]
     report: UnsupportedReport = check_unsupported(
         prose, master_data, job_req_text, labels=labels, titles=titles
     )
