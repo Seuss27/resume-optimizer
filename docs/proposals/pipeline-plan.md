@@ -631,10 +631,11 @@ the maintainer approves it. That approval also confirms the RO-D wording.
 
 ### Phase A — Stop the data loss; better output from today's path
 
-- **A1 — Test isolation.** Every test runs in `tmp_path`. A session fixture fails the suite if
-  the repo root's tracked or untracked file set changes, excluding `.pytest_cache` and
-  `__pycache__`. *Done when:* the suite run from the root leaves the root unchanged, and
-  removing one test's `chdir` turns the guard red.
+- **A1 — Test isolation.** Every test runs in `tmp_path`, through an autouse fixture. A session
+  fixture fails the suite if any file under the repo root is added, removed or modified,
+  excluding `.pytest_cache`, `__pycache__` and other tool-cache, VCS or environment directories.
+  *Done when:* the suite run from the root leaves the root unchanged, and a guard self-test
+  shows the guard turns red when a test adds, removes or modifies a root file.
 - **A2 — Prompt, frame and layout on the legacy path.**
   - The persona and the five-beat summary come out of `system_prompt.txt`, replaced by the
     §3.9 summary rule.

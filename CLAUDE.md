@@ -139,9 +139,8 @@ hatch run format --check       # ruff format --check
 `main-required-checks` ruleset requires it, and `.ai/project.yml` mirrors that ruleset. B8
 aligns the CI and security jobs with the glunk-works repos.
 
-**Until A1 lands, `hatch run test` writes `temp_resume.md` and `temp_cl.md` into the CWD and
-then deletes them.** Run it from a checkout with no preserved run output, or move those files
-out first.
+`tests/conftest.py` runs every test in its own `tmp_path` and fails the run if any file under
+the repo root is added, removed or modified.
 
 An untracked scratch file in the root fails both lint and the format check. Move it out of the
 repo rather than suppressing the rule.
@@ -152,9 +151,9 @@ repo rather than suppressing the rule.
 |---|---|
 | `requires-python >=3.10`, ruff target `py310`, rules `E,F,I,S` (no `B`), CI on 3.12–3.14; the target is 3.14 (3.15 advisory) — vs conventions and the target | B3 |
 | Credentials from `.env` / plain env vars, not the keyring — vs conventions | B5 |
+| Importing `generate.py` runs `load_dotenv()`, which reads the root `.env` (credentials, `LLM_PROVIDER`) into the test process — vs the rule that tests never read the repo root | B5 |
 | Unpinned dependencies; no SBOM, dependency audit, secrets scan, workflow lint or PR-title check — vs conventions and the glunk-works repos | B8 |
-| Tests not isolated from the repo root — vs this file | A1 |
-| Generated outputs and personal CSVs in the root (git-ignored) — vs this file | B2 makes paths configurable; the maintainer moves existing files; C6 retires the CSVs |
+| Generated outputs and personal CSVs in the root (git-ignored) — vs this file | B2 makes output paths configurable; C6 retires the CSVs and `master_data.json` |
 | `GEMINI.md` conflicts with this file (50-char subjects, `style`, Python 3.10); this file wins | B1 |
 | PRs target `main`, with no `develop` integration branch, as in claude-workbench | permanent (`pr_base: main`) |
 | Branch prefixes cover every commit type, not only `feat\|fix\|chore\|docs` | permanent |
