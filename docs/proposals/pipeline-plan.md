@@ -690,9 +690,19 @@ the maintainer approves it. That approval also confirms the RO-D wording.
 
   *Done when:* a wheel in a temp venv runs the mock pipeline from another directory, and the
   guard fails on a deliberately added `/runs/x`.
-- **B3 — Python and lint.** Moves to `>=3.12`, `py312` and the matching classifiers. Enables
-  ruff `B` and fixes what it finds. `evaluate_desirability` goes through the adapter. *Done
-  when:* a test fails if `genai.Client` is constructed outside `adapters.py`.
+- **B3 — Python and lint.** Standardises on Python 3.14, at the maintainer's request:
+  - `requires-python >=3.14`, ruff `target-version = "py314"`, and classifiers to match.
+  - The CI matrix becomes one required job, `build-and-test (3.14)`, plus a non-required
+    `build-and-test (3.15)` job (`continue-on-error`) that shows when the dependencies are
+    ready.
+  - Enables ruff `B` and fixes what it finds.
+  - Routes `evaluate_desirability` through the adapter.
+
+  The ruleset already requires only `build-and-test (3.14)`, because it was changed before this
+  task so the workflow change can merge. Promoting 3.15 later means adding it to the ruleset
+  first, then mirroring it into `.ai/project.yml`. *Done when:* a test fails if `genai.Client` is
+  constructed outside `adapters.py`, CI shows the 3.14 job required and the 3.15 job advisory,
+  and `ruleset-drift.sh` reports no missing checks.
 - **B4 — Logging.** Logs go to `RO_LOG_DIR`, third-party loggers are set to WARNING, `extra`
   keys pass through an allowlist, and the bug template gets a PII warning. *Done when:* known
   resume text is absent from a logged run.

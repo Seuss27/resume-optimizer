@@ -149,7 +149,7 @@ repo rather than suppressing the rule.
 
 | Item | Removed by |
 |---|---|
-| `requires-python >=3.10`, ruff target `py310`, rules `E,F,I,S` (no `B`) — vs conventions | B3 |
+| `requires-python >=3.10`, ruff target `py310`, rules `E,F,I,S` (no `B`), CI on 3.12–3.14; the target is 3.14 (3.15 advisory) — vs conventions and the target | B3 |
 | Credentials from `.env` / plain env vars, not the keyring — vs conventions | B5 |
 | Unpinned dependencies, no SBOM — vs conventions | F2 |
 | Tests not isolated from the repo root — vs this file | A1 |
