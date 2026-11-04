@@ -690,9 +690,18 @@ the maintainer approves it. That approval also confirms the RO-D wording.
 
   *Done when:* a wheel in a temp venv runs the mock pipeline from another directory, and the
   guard fails on a deliberately added `/runs/x`.
-- **B3 — Python and lint.** Moves to `>=3.12`, `py312` and the matching classifiers. Enables
-  ruff `B` and fixes what it finds. `evaluate_desirability` goes through the adapter. *Done
-  when:* a test fails if `genai.Client` is constructed outside `adapters.py`.
+- **B3 — Python and lint configuration.** Standardises on Python 3.14, at the maintainer's
+  request:
+  - `requires-python >=3.14`, ruff `target-version = "py314"`, and classifiers to match.
+  - Ruff rules `E,F,I,B,S` at line length 100. The test-only `per-file-ignores` follow the
+    glunk-works repos.
+  - Ruff pinned to the version the glunk-works repos use, in the hatch env and in
+    `.pre-commit-config.yaml`.
+  - The `B` findings fixed.
+  - `evaluate_desirability` routed through the adapter.
+
+  The CI matrix change belongs to B8. *Done when:* a test fails if `genai.Client` is
+  constructed outside `adapters.py`, and `hatch run lint` passes under the new rules.
 - **B4 — Logging.** Logs go to `RO_LOG_DIR`, third-party loggers are set to WARNING, `extra`
   keys pass through an allowlist, and the bug template gets a PII warning. *Done when:* known
   resume text is absent from a logged run.
@@ -720,6 +729,44 @@ the maintainer approves it. That approval also confirms the RO-D wording.
 - **B7 — Release process.** Moves the version source from `generate.py` to `__init__.py`. Adds
   tagging and a changelog line, and documents the `ro` install from a tag. *Done when:* a tag
   exists, and a wheel built from it reports that version.
+- **B8 — Align CI, lint and security tooling with glunk-works (absorbs F1 and F2).** Matches
+  the tooling bounty-infra, loop-orchestrator and scope-core run, so that this repo looks the
+  same as the others when it moves to the org (F6).
+  - **CI jobs** (`.github/workflows/ci.yml`):
+    - `lint` runs `ruff check` and `ruff format --check`.
+    - `test` runs pytest on 3.14.
+    - `test-py315` runs pytest on 3.15, `continue-on-error`, advisory only.
+    - `dependency-audit` runs `pip-audit`.
+    - `sbom` runs `cyclonedx-py` and uploads the result as an artifact.
+    - `secrets-scan` runs gitleaks, with `.gitleaks.toml` extending the defaults.
+    - `zizmor` lints the GitHub Actions workflows.
+
+    Every job runs unconditionally, so none can report `skipped`.
+  - **`pr-title` workflow:** checks the Conventional Commits grammar with a 72-character limit,
+    on its own `pull_request` trigger that includes `edited`. The title reaches the shell
+    through `env:`.
+  - **`ruleset-drift` workflow:** a daily scheduled check that `main-required-checks` still
+    holds.
+  - **Workflow hygiene:** every action is pinned by commit SHA with a version comment. Each
+    workflow has a top-level `permissions: contents: read` and sets `persist-credentials: false`.
+  - **Dependabot:** pip runs daily with a `chore` prefix, and GitHub Actions weekly with a `ci`
+    prefix, both with `include: scope`, so every Dependabot PR title passes `pr-title`. The
+    rule that ignored major versions is dropped.
+  - **Dependencies:** pinned to exact versions in `pyproject.toml` and the hatch envs, as the
+    glunk-works repos do. The pin set is CVE-clean under `pip-audit`.
+  - **Ruleset swap, done in the order `conventions.md` § *Prose economy* requires:** the new
+    jobs first run on this task's PR. Just before merge, the maintainer's session updates
+    `main-required-checks` on GitHub to require `lint`, `test`, `dependency-audit`, `sbom`,
+    `secrets-scan`, `zizmor` and `pr-title`, replacing `build-and-test (3.14)`. The same PR then
+    mirrors that read-back into `.ai/project.yml`.
+
+  *Done when:*
+  - every required job above is green on the PR, and `test-py315` reports without blocking
+  - a malformed title fails `pr-title`, and a planted fake secret in a scratch branch fails
+    `secrets-scan`
+  - `zizmor` reports no findings on the repo's workflows
+  - the SBOM is a CI artifact
+  - `ruleset-drift.sh` reports no missing checks after the swap
 
 ### Phase C — Ledger and excavation
 
@@ -948,18 +995,7 @@ the maintainer approves it. That approval also confirms the RO-D wording.
 
 ### Phase F — Hygiene and cutover
 
-- **F1 — Title check and ruleset.** (The `type/*`, `area/*` and `status/*` labels are created
-  when the sprints are filed, not here.)
-  - Adds a `pr-title` job: `pull_request` trigger, title passed through `env:`,
-    `contents: read`, `deps` exempt.
-  - Adds a ruleset requiring `build-and-test (3.12)`, `(3.13)`, `(3.14)` and `pr-title`, in the
-    order `conventions.md` § *Prose economy* gives.
-  - Sets squash, merge-commit and auto-delete.
-
-  *Done when:* `gh api repos/{repo}/rules/branches/main` lists the checks, and a malformed
-  title fails.
-- **F2 — Pinning and SBOM.** Pins dependencies, adds a CycloneDX SBOM in CI, and makes F1 also
-  require the SBOM job. *Done when:* every dependency is pinned and the SBOM is a CI artifact.
+- **F1, F2:** absorbed into B8.
 - **F3 — Sheet mirror.** `export-sheet` (confirmed entries only, with `id`/`source` columns and
   reversible formula-cell escaping) runs as a ledger Action, per §3.8. A Perplexity diff import
   (an export of the `RO-D12` imported tabs only, compared against the last mirror) produces
@@ -970,8 +1006,12 @@ the maintainer approves it. That approval also confirms the RO-D wording.
 - **F4 — Retire the legacy path.** Removes the legacy single-pass path and rewrites
   `readme.md`. *Done when:* `generate.py`'s single-call path is gone, and `ro tailor --master`
   passes its test.
-- **F5 — Adopt the plugin.** Adopts the `way-of-working` plugin once it ships
-  (`.ai/project.yml`, `pr_base: main`).
+- **F5 — Adopt the plugin.** Pins the `way-of-working` plugin in `.claude/settings.json` and
+  writes `.ai/project.yml` (with `identities: null` and `review.ci_gate: null`). Creates the
+  `main-required-checks` ruleset on GitHub first, then mirrors it, and seeds `.ai/next-steps.md`.
+  Pulled forward into S01 at the maintainer's request. *Done when:* the plugin's
+  `schema-complete.sh check` prints `complete`, `ruleset-drift.sh` reports no missing types or
+  checks, and `/way-of-working:resume` runs in this repo.
 - **F6 — Transfer.** The maintainer transfers the repo to `glunk-works`.
 
 ### Sprints
@@ -984,8 +1024,8 @@ issue is the single list of the maintainer's follow-ups.
 
 | Sprint (milestone) | Tasks | Delivers |
 |---|---|---|
-| S01 — Stop the data loss, quick wins | A1, A2, A3, B1, maintainer prerequisites | better output from today's path |
-| S02 — Foundation and de-risk | B2, B3, B4, B5, B6, B7 | packaging, credentials, the `claude -p` verdict |
+| S01 — Stop the data loss, quick wins | F5, A1, A2, A3, B1, maintainer prerequisites | the session protocol, then better output from today's path |
+| S02 — Foundation and de-risk | B2, B3, B8, B4, B5, B6, B7 | packaging, glunk-works CI and security tooling, credentials, the `claude -p` verdict |
 | S03 — Ledger core | C1a, C1b, C2, C3 | the private ledger, imported |
 | S04 — Grow the ledger | C4a, C5a, C6, A4 | the legacy path reads a grown ledger |
 | S05 — Engine runtime and checks | D1 (absorbs #8), D2, D3 | role runtime and claim policy |
@@ -993,7 +1033,7 @@ issue is the single list of the maintainer's follow-ups.
 | S07 — Render and MVP | D5, D6 (absorbs #21) | first `ro tailor` output |
 | S08 — Interview and control | D7, D8, D9 | interview, variants, redraft, verify |
 | S09 — Quality and speed | E1, E2, E3 | runs stats, base drafts, eval |
-| S10 — Hygiene and cutover | F1, F2, F3, F4, F5, F6 | CI rules, the mirror, retiring the legacy path |
+| S10 — Hygiene and cutover | F3, F4, F6 | the mirror, retiring the legacy path, the transfer |
 
 The maintainer prerequisites issue in S01 covers:
 
@@ -1005,13 +1045,13 @@ The maintainer prerequisites issue in S01 covers:
 **Order:**
 
 - **Phase A:** A1 first, then A2 and A3 in parallel, then A4.
-- **B and C1a/C1b:** B1–B5 and B7 run in parallel with C1a. C1b needs C1a and B5. B6 precedes
-  D1.
+- **B and C1a/C1b:** B1–B5 and B7 run in parallel with C1a. B8 needs B3. C1b needs C1a and
+  B5. B6 precedes D1.
 - **C:** C2 needs C1b. C3 and C4a follow C2. C5a needs C3. C6 needs C5a, so the legacy path
   gains the grown ledger before Phase D. C4b needs D1, and C5b needs C4b.
 - **D:** D2 needs D1. D3 needs D2. D4 needs D1 and C4a. D5 comes after C1a and D2–D4. Then
   D6 → D7 (which also needs C4b) → D8 → D9.
-- **E and F:** E follows D6. F1, F2 and F3 can come at any time once their inputs exist.
+- **E and F:** E follows D6. F3 can come at any time once its inputs exist.
 
 ## 5. Risks
 

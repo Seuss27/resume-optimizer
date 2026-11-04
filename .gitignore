@@ -27,3 +27,7 @@ env/
 *.csv
 master_data.json
 .vscode/*
+
+# way-of-working local cursor and retired snapshots (git-ignored by design; .ai/next-steps.md is tracked)
+.ai/state.json
+.ai/archive/
