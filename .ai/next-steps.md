@@ -1,29 +1,24 @@
 # Next steps
 
-**Now:** Sprint S01, "Stop the data loss, quick wins" (milestone 1), `implementing`.
+**Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `planning`.
 
-**Just done:**
-- Task #31 (A2): the legacy prompt, letter frame, headline and grouped layout are built and open as
-  PR #82. The generation and ATS calls carry no contact block (`RO-D13`); `--score-job` still sends
-  the `Pref_*` preferences to Gemini (CLAUDE.md Deviations row; F4 retires it).
-- Critic pass on #31: `architect`, `security-critic` and `docs-consistency`, 2 rounds, converged.
-  A later `career_years` change then went through 5 rounds of `architect` and `security-critic`
-  and hit the cap. Real runs showed the model still attaches the figure to domains, so the
-  exemption was dropped: code computes the span, the resume header prints it, and the model is
-  told never to state years of experience (the A3 check flags any it writes). No second-opinion round.
+**Just done:** Sprint S01 archived (snapshot in `.ai/archive/S01-next-steps.md`, git-ignored): F5, A1, A2,
+A3 and B1 shipped, the last as PR #82 (`9b7f758`, task #31). The maintainer prerequisites issue (#34)
+moved to S03 so S01 could close. First anchor taken for milestone 2 (the plan anchor in `.ai/state.json`).
 
-**Next:** the maintainer does the real-req comparison for #31 and merges PR #82. Then S01 has only
-#34 left (the owner's checklist), so run `/way-of-working:archive-sprint` when the maintainer calls
-the sprint done. Model: **sonnet** (coder).
+**Milestone close:** closed — milestone 1, "S01 — Stop the data loss, quick wins" (0 open issues; #34 moved to S03 first, at the maintainer's request).
 
-**HITL Gate: OPEN** — PR #82 awaits the maintainer's real-req comparison (counts only, recorded in
-the PR without quoting output) and merge.
+**Next:** plan S02 (B2, B3, B8, B4, B5, B6, B7: packaging, glunk-works CI and security tooling,
+credentials, the `claude -p` verdict). `/way-of-working:plan-sprint` can help triage the backlog, then
+`/way-of-working:handoff` once the plan is approved. Model: **opus** (architect).
 
-**Open for the owner (non-blocking):** the rest of #34's checklist (the Sheet CSV export, the
-Claude training-setting check and the LinkedIn export), which blocks C3, B6/D1 and C4a in later
-sprints. The Gemini billed-project item is confirmed.
+**HITL Gate: OPEN** — first anchor for milestone 2 (S02): the maintainer confirms S02 is the sprint to
+plan. The gate shows no milestone description text.
+
+**Open for the owner (non-blocking):** the Sheet CSV export in #34 (now on S03), which blocks C3.
+The Claude training-setting check, the billed-Gemini check and the LinkedIn export are ticked there.
 
 **Pointers:**
 - the plan: [docs/proposals/pipeline-plan.md](../docs/proposals/pipeline-plan.md)
 - the decisions: [docs/decisions.md](../docs/decisions.md)
-- the sprint plan: https://github.com/Seuss27/resume-optimizer/milestone/1
+- the sprint plan: https://github.com/Seuss27/resume-optimizer/milestone/2
