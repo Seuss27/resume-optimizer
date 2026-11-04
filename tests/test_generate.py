@@ -57,9 +57,17 @@ def test_parse_args_defaults_preserve_markdown_to_false(monkeypatch: pytest.Monk
     assert args.preserve_markdown is False
 
 
-def test_parse_args_defaults_grouped_layout_to_false(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Validates the grouped layout configuration defaults to False."""
+def test_parse_args_defaults_grouped_layout_to_true(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Validates the grouped-by-employer layout is the default."""
     monkeypatch.setattr(sys, "argv", ["generate-resume"])
+    args: argparse.Namespace = generate.parse_args()
+
+    assert args.grouped_layout is True
+
+
+def test_parse_args_disables_grouped_layout_flag(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verifies --no-grouped-layout restores the flat chronological layout."""
+    monkeypatch.setattr(sys, "argv", ["generate-resume", "--no-grouped-layout"])
     args: argparse.Namespace = generate.parse_args()
 
     assert args.grouped_layout is False
@@ -152,7 +160,7 @@ def test_generate_collateral_markdown_structure_is_valid(
     monkeypatch.setattr(generate.pypandoc, "get_pandoc_version", mock_get_pandoc_version)
     monkeypatch.setattr(generate.pypandoc, "convert_file", mock_convert_file)
 
-    generate.generate_collateral("Target job requisition")
+    generate.generate_collateral("Target job requisition", grouped_layout=False)
 
     resume_md: str = captured_markdown["resume"]
     cover_letter_md: str = captured_markdown["cover_letter"]
@@ -670,3 +678,365 @@ def test_generate_collateral_master_mode_skips_cover_letter_and_validations(
     assert resume_output.exists()
     assert not cover_output.exists()
     assert not (tmp_path / "temp_cl.md").exists()
+
+
+SYNTHETIC_CONTACT: dict[str, str] = {
+    "Name": "Jane Doe",
+    "Email": "jane.doe@example.com",
+    "Phone": "555-0100",
+    "LinkedIn": "linkedin.com/in/janedoe",
+    "Location": "Seattle, WA",
+    "Pref_Min_Salary": "150k",
+}
+
+
+def test_provider_payload_is_an_allowlist_of_career_keys() -> None:
+    """Only the career keys go out. `contact` and any unknown key stay local."""
+    data: dict[str, Any] = {
+        "contact": SYNTHETIC_CONTACT,
+        "Contact": SYNTHETIC_CONTACT,
+        "profile": {"phone": "555-0100"},
+        "all_skills": ["Python"],
+        "companies": [],
+    }
+
+    assert generate.provider_payload(data) == {"all_skills": ["Python"], "companies": []}
+
+
+def test_name_stated_in_keeps_only_names_the_text_states() -> None:
+    """A hiring manager is kept only if the requisition states the name."""
+    req: str = "Questions go to  sam   LEE in talent."
+
+    assert generate.name_stated_in("Sam Lee", req) == "Sam Lee"
+    assert generate.name_stated_in("Pat Roe", req) == ""
+    assert generate.name_stated_in("", req) == ""
+    assert generate.name_stated_in(None, req) == ""
+    assert generate.name_stated_in("Ann", "strong annual planning skills") == ""
+
+
+def test_format_letter_date_has_no_zero_padded_day() -> None:
+    """The letter date reads like a business letter."""
+    from datetime import date
+
+    assert generate.format_letter_date(date(2026, 3, 5)) == "March 5, 2026"
+
+
+def test_no_contact_field_reaches_the_provider_payload(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """No contact value appears in the prompt or the system instruction sent to the provider."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "master_data.json").write_text(
+        json.dumps(
+            {
+                "contact": SYNTHETIC_CONTACT,
+                "all_skills": ["Python"],
+                "companies": [{"company": "Acme Inc", "roles": []}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (tmp_path / "system_prompt.txt").write_text("system prompt", encoding="utf-8")
+    # Templates that print the whole contact block, as the real ones do, so a leak would show.
+    (tmp_path / "resume_template.md").write_text(
+        "{{ contact['Name'] }} {{ contact['Email'] }} {{ contact['Phone'] }} "
+        "{{ contact['Location'] }} {{ contact['LinkedIn'] }}",
+        encoding="utf-8",
+    )
+    (tmp_path / "cover_letter_template.md").write_text("Letter", encoding="utf-8")
+    (tmp_path / "ats_prompt.txt").write_text("ats prompt", encoding="utf-8")
+
+    payload: dict[str, Any] = {
+        "job_metadata": {"company_name": "Acme Inc", "role_title": "Developer"},
+        "professional_summary": "Engineer.",
+        "selected_skills": ["Python"],
+        "tailored_companies": [],
+        "cover_letter_body": "Hello.",
+    }
+    ats_payload: dict[str, Any] = {
+        "ats_score": 90,
+        "missing_keywords": [],
+        "formatting_compliance": "ok",
+        "critical_feedback": "none",
+    }
+    mock_adapter = MockLLMAdapter(mock_responses=[payload, ats_payload])
+    monkeypatch.setattr("resume_optimizer.generate.get_llm_engine", lambda: mock_adapter)
+    monkeypatch.setattr(generate.pypandoc, "get_pandoc_version", lambda: "2.0")
+    monkeypatch.setattr(
+        generate.pypandoc,
+        "convert_file",
+        lambda input_file, fmt, outputfile, **kw: Path(outputfile).write_text("x"),
+    )
+    monkeypatch.setattr(generate, "page_count", lambda path: 1)
+
+    generate.generate_collateral("Target job requisition", validate=True)
+
+    assert len(mock_adapter.call_history) == 2  # generation and the ATS pass
+    sent: str = json.dumps(mock_adapter.call_history)
+    for value in SYNTHETIC_CONTACT.values():
+        assert value not in sent
+    assert "contact" not in mock_adapter.call_history[0]["prompt"]
+    assert "Acme Inc" in mock_adapter.call_history[0]["prompt"]
+
+
+def test_generate_collateral_renders_headline_and_letter_frame(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Code supplies the headline, location and the letter's date, addressee and Re: line."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "master_data.json").write_text(
+        json.dumps({"contact": SYNTHETIC_CONTACT}), encoding="utf-8"
+    )
+    (tmp_path / "system_prompt.txt").write_text("system prompt", encoding="utf-8")
+    (tmp_path / "resume_template.md").write_text(
+        "{{ contact['Name'] }}|{{ headline }}|{{ contact['Location'] }}", encoding="utf-8"
+    )
+    (tmp_path / "cover_letter_template.md").write_text(
+        "{{ letter_date }}|{{ hiring_manager }}|{{ company }}|Re: {{ role }}|{{ contact['Name'] }}",
+        encoding="utf-8",
+    )
+
+    captured: dict[str, str] = {}
+
+    def fake_convert(input_file: str, fmt: str, outputfile: str, **kwargs: Any) -> None:
+        captured[input_file] = Path(input_file).read_text(encoding="utf-8")
+        Path(outputfile).write_text("x", encoding="utf-8")
+
+    payload: dict[str, Any] = {
+        "job_metadata": {
+            "company_name": "Acme Inc",
+            "role_title": "Developer",
+            "hiring_manager": "Sam Lee",
+        },
+        "headline": "Platform engineer for regulated systems",
+        "professional_summary": "Engineer.",
+        "selected_skills": [],
+        "tailored_companies": [],
+        "cover_letter_body": "Hello.",
+    }
+    monkeypatch.setattr(
+        "resume_optimizer.generate.get_llm_engine",
+        lambda: MockLLMAdapter(mock_responses=[payload]),
+    )
+    monkeypatch.setattr(generate.pypandoc, "get_pandoc_version", lambda: "2.0")
+    monkeypatch.setattr(generate.pypandoc, "convert_file", fake_convert)
+    monkeypatch.setattr(generate, "page_count", lambda path: 1)
+    monkeypatch.setattr(generate, "format_letter_date", lambda today: "January 2, 2030")
+
+    generate.generate_collateral("Reach Sam Lee in talent.", preserve_markdown=True)
+
+    assert (
+        captured["temp_resume.md"] == "Jane Doe|Platform engineer for regulated systems|Seattle, WA"
+    )
+    assert captured["temp_cl.md"] == "January 2, 2030|Sam Lee|Acme Inc|Re: Developer|Jane Doe"
+
+
+def test_unstated_hiring_manager_is_dropped_from_the_letter(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A hiring manager the requisition does not name never reaches the letter."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "master_data.json").write_text(
+        json.dumps({"contact": SYNTHETIC_CONTACT}), encoding="utf-8"
+    )
+    (tmp_path / "system_prompt.txt").write_text("system prompt", encoding="utf-8")
+    (tmp_path / "resume_template.md").write_text("Resume", encoding="utf-8")
+    (tmp_path / "cover_letter_template.md").write_text(
+        "Dear {{ hiring_manager or 'Hiring Manager' }},", encoding="utf-8"
+    )
+
+    captured: dict[str, str] = {}
+
+    def fake_convert(input_file: str, fmt: str, outputfile: str, **kwargs: Any) -> None:
+        captured[input_file] = Path(input_file).read_text(encoding="utf-8")
+        Path(outputfile).write_text("x", encoding="utf-8")
+
+    payload: dict[str, Any] = {
+        "job_metadata": {
+            "company_name": "Acme Inc",
+            "role_title": "Developer",
+            "hiring_manager": "Invented Person",
+        },
+        "professional_summary": "Engineer.",
+        "selected_skills": [],
+        "tailored_companies": [],
+        "cover_letter_body": "Hello.",
+    }
+    monkeypatch.setattr(
+        "resume_optimizer.generate.get_llm_engine",
+        lambda: MockLLMAdapter(mock_responses=[payload]),
+    )
+    monkeypatch.setattr(generate.pypandoc, "get_pandoc_version", lambda: "2.0")
+    monkeypatch.setattr(generate.pypandoc, "convert_file", fake_convert)
+    monkeypatch.setattr(generate, "page_count", lambda path: 1)
+
+    generate.generate_collateral("A requisition that names nobody.", preserve_markdown=True)
+
+    assert captured["temp_cl.md"] == "Dear Hiring Manager,"
+
+
+def _roles(*dates: str) -> dict[str, Any]:
+    """Master data with one role per dates string."""
+    roles = [{"title": "T", "dates": d} for d in dates]
+    return {"companies": [{"company": "Acme Inc", "roles": roles}]}
+
+
+def test_career_years_is_a_floor_from_the_earliest_year() -> None:
+    """The span is floored: a year is taken off, then it rounds down to a multiple of five."""
+    from datetime import date
+
+    today = date(2026, 1, 15)
+
+    assert generate.career_years(_roles("2000 - Present"), today) == "25+"
+    assert generate.career_years(_roles("2015 - 2019", "2010 - Present"), today) == "15+"
+    assert generate.career_years(_roles("2016 - Present"), today) == "9+"
+    assert generate.career_years(_roles("2020 - Present"), today) == "5+"
+
+
+def test_career_years_ends_at_the_last_year_unless_a_role_is_current() -> None:
+    """A career that ended years ago is not counted up to today."""
+    from datetime import date
+
+    today = date(2026, 11, 4)
+
+    assert generate.career_years(_roles("2000 - 2015"), today) == "10+"
+    assert generate.career_years(_roles("2000 - Now"), today) == "25+"
+    assert generate.career_years(_roles("Jan 2000 - Present"), today) == "25+"
+    assert generate.career_years(_roles("Sept. 2000 - Present"), today) == "25+"
+    assert generate.career_years(_roles("January 2000 - September 2010"), today) == "9+"
+    assert generate.career_years(_roles("2000 to Present"), today) == "25+"
+    assert generate.career_years(_roles("2008"), today) is None
+    assert generate.career_years(_roles("2000", "2008"), today) == "7+"
+    assert generate.career_years(_roles("2000 - 2015", "2020 - current"), today) == "25+"
+
+
+def test_career_years_skips_fields_that_are_not_plain_date_ranges() -> None:
+    """A stray year or a remark in a dates field makes it unreadable, so it is skipped."""
+    from datetime import date
+
+    today = date(2026, 11, 4)
+
+    assert generate.career_years(_roles("2015 - Present (founded 1990)"), today) is None
+    assert generate.career_years(_roles("2005 - 2010 (firm now defunct)"), today) is None
+    assert generate.career_years(_roles("2010 - 2015 (rehired 2024)"), today) is None
+    # a leading word that is not a month is not a date
+    assert generate.career_years(_roles("Founded 1990 - Present"), today) is None
+    assert generate.career_years(_roles("Est. 1990"), today) is None
+    # a year in the future is a typo, so the whole field is skipped, not clamped
+    assert generate.career_years(_roles("2000 - 2052"), today) is None
+    assert generate.career_years(_roles("2000 - 2010", "2020 - 2052"), today) == "9+"
+    # a skipped current role can only shorten the span
+    assert generate.career_years(_roles("2000 - 2010", "2019 - Present (remote)"), today) == "9+"
+
+
+def test_career_years_is_none_when_it_cannot_be_trusted() -> None:
+    """No year, no companies, a span under a year or an absurd span gives nothing."""
+    from datetime import date
+
+    today = date(2026, 11, 4)
+
+    assert generate.career_years({}, today) is None
+    assert generate.career_years({"companies": ["not a dict"]}, today) is None
+    assert generate.career_years(_roles("Present", ""), today) is None
+    assert generate.career_years(_roles("2026 - Present"), today) is None
+    assert generate.career_years(_roles("1906 - Present"), today) is None
+
+
+def test_career_years_is_written_by_code_and_a_model_years_claim_is_flagged(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Code puts the span in the header. The model never sees it, and a years claim it writes
+    anyway is reported like any other unsupported number."""
+    from datetime import date
+
+    monkeypatch.chdir(tmp_path)
+    started: int = date.today().year - 30  # a span under the 60-year sanity limit, in any year
+    data: dict[str, Any] = {
+        "contact": SYNTHETIC_CONTACT,
+        "all_skills": ["Python"],
+        **_roles(f"{started} - Present"),
+    }
+    (tmp_path / "master_data.json").write_text(json.dumps(data), encoding="utf-8")
+    (tmp_path / "system_prompt.txt").write_text("system prompt", encoding="utf-8")
+    (tmp_path / "resume_template.md").write_text(
+        "{{ headline }}|{{ career_years }} years of experience", encoding="utf-8"
+    )
+    (tmp_path / "cover_letter_template.md").write_text("Letter", encoding="utf-8")
+    span: str | None = generate.career_years(data)
+    assert span is not None
+    digits: str = span.rstrip("+")
+    captured: dict[str, str] = {}
+
+    def fake_convert(input_file: str, fmt: str, outputfile: str, **kwargs: Any) -> None:
+        captured[input_file] = Path(input_file).read_text(encoding="utf-8")
+        Path(outputfile).write_text("x", encoding="utf-8")
+
+    def run(summary: str) -> tuple[str, MockLLMAdapter]:
+        payload: dict[str, Any] = {
+            "job_metadata": {"company_name": "Acme Inc", "role_title": "Developer"},
+            "headline": "Platform engineer",
+            "professional_summary": summary,
+            "selected_skills": [],
+            "tailored_companies": [],
+            "cover_letter_body": "Hello.",
+        }
+        adapter = MockLLMAdapter(mock_responses=[payload])
+        monkeypatch.setattr("resume_optimizer.generate.get_llm_engine", lambda: adapter)
+        monkeypatch.setattr(generate.pypandoc, "get_pandoc_version", lambda: "2.0")
+        monkeypatch.setattr(generate.pypandoc, "convert_file", fake_convert)
+        monkeypatch.setattr(generate, "page_count", lambda path: 1)
+        generate.generate_collateral("Target job requisition", preserve_markdown=True)
+        return capsys.readouterr().out, adapter
+
+    out, adapter = run("Engineer who cut costs.")
+    assert captured["temp_resume.md"] == f"Platform engineer|{span} years of experience"
+    assert "career_years" not in adapter.call_history[0]["prompt"]
+    assert span not in adapter.call_history[0]["prompt"]
+    assert "Numbers: none" in out
+    for claim in (
+        f"Leader with {span} years of experience.",
+        f"Leader with {span} years of experience in Python.",
+        f"{span} years of cloud work.",
+    ):
+        assert f"Numbers: {digits}" in run(claim)[0]
+
+
+def test_resume_and_letter_share_the_reference_document(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The letter gets the resume's margins and styles, and both stay sandboxed."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "master_data.json").write_text(
+        json.dumps({"contact": SYNTHETIC_CONTACT}), encoding="utf-8"
+    )
+    (tmp_path / "system_prompt.txt").write_text("system prompt", encoding="utf-8")
+    (tmp_path / "resume_template.md").write_text("Resume", encoding="utf-8")
+    (tmp_path / "cover_letter_template.md").write_text("Letter", encoding="utf-8")
+
+    calls: list[list[str]] = []
+
+    def fake_convert(input_file: str, fmt: str, outputfile: str, **kwargs: Any) -> None:
+        calls.append(kwargs["extra_args"])
+        Path(outputfile).write_text("x", encoding="utf-8")
+
+    payload: dict[str, Any] = {
+        "job_metadata": {"company_name": "Acme Inc", "role_title": "Developer"},
+        "professional_summary": "Engineer.",
+        "selected_skills": [],
+        "tailored_companies": [],
+        "cover_letter_body": "Hello.",
+    }
+    monkeypatch.setattr(
+        "resume_optimizer.generate.get_llm_engine",
+        lambda: MockLLMAdapter(mock_responses=[payload]),
+    )
+    monkeypatch.setattr(generate.pypandoc, "get_pandoc_version", lambda: "2.0")
+    monkeypatch.setattr(generate.pypandoc, "convert_file", fake_convert)
+    monkeypatch.setattr(generate, "page_count", lambda path: 1)
+
+    generate.generate_collateral("Target job requisition")
+
+    assert len(calls) == 2
+    for extra_args in calls:
+        assert "--reference-doc=resume_reference.docx" in extra_args
+        assert "--sandbox" in extra_args

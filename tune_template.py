@@ -37,11 +37,13 @@ def tune_formatting() -> None:
 
     resume_markdown: str = resume_template.render(
         contact=master_data.get("contact", {}),
+        headline=gemini_output.get("headline", ""),
         professional_summary=gemini_output.get("professional_summary", ""),
         skills_list=gemini_output.get("selected_skills", []),
         experience=gemini_output.get("tailored_companies", []),
         certifications=gemini_output.get("selected_certifications", []),
         education=gemini_output.get("selected_education", []),
+        grouped_layout=True,
     )
 
     temp_markdown: Path = Path("temp_tune_resume.md")

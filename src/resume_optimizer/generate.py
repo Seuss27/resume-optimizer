@@ -259,6 +259,8 @@ def collect_output_segments(output: dict[str, Any]) -> tuple[list[str], list[str
         are the role titles.
     """
     prose: list[str] = [str(output.get("professional_summary") or "")]
+    if output.get("headline"):
+        prose.append(str(output["headline"]))
     labels: list[str] = []
     titles: list[str] = []
     for key in ("selected_skills", "selected_certifications"):
@@ -347,12 +349,112 @@ def print_page_counts(documents: dict[str, Path]) -> list[str]:
     return refused
 
 
+# The career keys `build_state.py` writes that the generation call may send. Any other key,
+# `contact` included, stays local, so an unknown key fails closed.
+PROVIDER_CAREER_KEYS: tuple[str, ...] = ("all_skills", "companies", "certifications", "education")
+
+
+# A role's dates are read only when the whole field has the shape of a date range such as
+# "2018 - Present" or "Jan 2018 - Mar 2021", or is a single year. A stray year in a note, or a
+# trailing remark after "Present", makes the field unreadable, and an unreadable field is skipped.
+_MONTH: str = (
+    r"(?:(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?"
+    r"|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?\s+|\d{1,2}/)?"
+)
+_YEAR_DIGITS: str = r"((?:19|20)\d{2})"
+_DATE_RANGE: re.Pattern[str] = re.compile(
+    rf"^\s*{_MONTH}{_YEAR_DIGITS}\s*(?:[-\u2013\u2014]|to)\s*"
+    rf"(?:{_MONTH}{_YEAR_DIGITS}|(present|current|now))\s*$",
+    re.IGNORECASE,
+)
+_SINGLE_YEAR: re.Pattern[str] = re.compile(rf"^\s*{_MONTH}{_YEAR_DIGITS}\s*$", re.IGNORECASE)
+
+
+def career_years(master_data: dict[str, Any], today: date | None = None) -> str | None:
+    """Returns the career span as a floor such as "25+", or None if it cannot be read.
+
+    The span runs from the earliest year in any readable role to the latest year found, or to
+    today's year when a role ends at Present, Current or Now. A role's dates are readable only
+    when the whole field is a date range or a single year (see `_DATE_RANGE`); anything else is
+    skipped, which can only shorten the span. The dates are read to the year, so one year is
+    taken off: the figure never overstates the span. From ten years up it is floored to a
+    multiple of five. A span over 60 years is taken as a typo and returns None. The span is
+    calendar time between the first and last role, so a gap between roles is counted.
+    Code computes it so the model never does its own arithmetic on dates.
+    """
+    this_year: int = (today or date.today()).year
+    years: list[int] = []
+    is_current: bool = False
+    for company in master_data.get("companies") or []:
+        if not isinstance(company, dict):
+            continue
+        for role in company.get("roles") or []:
+            dates: str = str(role.get("dates") or "") if isinstance(role, dict) else ""
+            found: list[int] = []
+            ends_now: bool = False
+            if range_match := _DATE_RANGE.match(dates):
+                start, stop, current = range_match.groups()
+                found = [int(start)] + ([int(stop)] if stop else [])
+                ends_now = current is not None
+            elif single_match := _SINGLE_YEAR.match(dates):
+                found = [int(single_match.group(1))]
+            if any(year > this_year for year in found):
+                continue  # a year in the future is a typo, so the whole field is unreadable
+            years.extend(found)
+            is_current = is_current or ends_now
+    if not years:
+        return None
+    end: int = this_year if is_current else max(years)
+    span: int = end - min(years) - 1
+    if span < 1 or span > 60:
+        return None
+    return f"{span // 5 * 5 if span >= 10 else span}+"
+
+
+def provider_payload(master_data: dict[str, Any]) -> dict[str, Any]:
+    """Returns the career data the generation call sends: an allowlist of career keys.
+
+    The contact block (name, email, phone, location, profile link) is never in it. Code renders
+    the header and the letter frame from that block locally (`RO-D13`).
+    """
+    return {key: master_data[key] for key in PROVIDER_CAREER_KEYS if key in master_data}
+
+
+# Stand-in contact block for the ATS pass: it keeps the header's shape and sends nothing real.
+ATS_PLACEHOLDER_CONTACT: dict[str, str] = {
+    "Name": "Candidate Name",
+    "Location": "City, ST",
+    "Email": "candidate@example.com",
+    "Phone": "000-000-0000",
+    "LinkedIn": "linkedin.com/in/candidate",
+}
+
+
+def name_stated_in(name: str | None, text: str) -> str:
+    """Returns `name` (whitespace collapsed) only if `text` contains it as whole words.
+
+    The match ignores case and runs of whitespace. A name the model supplied but the
+    requisition text does not contain is dropped, so a name that is only a fragment of another
+    word never counts.
+    """
+    collapsed: str = " ".join((name or "").split())
+    if not collapsed:
+        return ""
+    pattern: str = rf"(?<!\w){re.escape(collapsed)}(?!\w)"
+    return collapsed if re.search(pattern, " ".join(text.split()), re.IGNORECASE) else ""
+
+
+def format_letter_date(today: date) -> str:
+    """Formats a date for the cover-letter frame, for example "March 5, 2026"."""
+    return f"{today:%B} {today.day}, {today.year}"
+
+
 def generate_collateral(
     job_req_text: str,
     validate: bool = False,
     preserve_markdown: bool = False,
     evaluate_job: bool = False,
-    grouped_layout: bool = False,
+    grouped_layout: bool = True,
     master_mode: bool = False,
     data_path: str | Path = "master_data.json",
 ) -> None:
@@ -363,7 +465,7 @@ def generate_collateral(
         validate: If True, performs a secondary ATS validation pass.
         preserve_markdown: If True, keeps the intermediate Markdown files.
         evaluate_job: If True, evaluates the job against personal preferences.
-        grouped_layout: If True, uses the nested layout template.
+        grouped_layout: If True (the default), groups roles under each employer.
         master_mode: If True, generates a comprehensive resume and skips cover letter.
     """
     # 1. Initialize our decoupled engine
@@ -410,7 +512,15 @@ def generate_collateral(
                 "properties": {
                     "company_name": {"type": "STRING"},
                     "role_title": {"type": "STRING"},
+                    "hiring_manager": {
+                        "type": "STRING",
+                        "description": "Optional. Only a name the requisition itself states.",
+                    },
                 },
+            },
+            "headline": {
+                "type": "STRING",
+                "description": "Optional. A headline of at most 12 words for the resume header.",
             },
             "professional_summary": {"type": "STRING"},
             "selected_skills": {"type": "ARRAY", "items": {"type": "STRING"}},
@@ -459,9 +569,11 @@ def generate_collateral(
         },
     }
 
-    # 4. Call the API
+    # 4. Call the API. Code computes the career span; it goes in the header, never to the model.
+    span: str | None = career_years(master_data)
 
-    user_prompt: str = f"Job Req:\n{job_req_text}\n\nMaster Data:\n{json.dumps(master_data)}"
+    sent_data: str = json.dumps(provider_payload(master_data))
+    user_prompt: str = f"Job Req:\n{job_req_text}\n\nMaster Data:\n{sent_data}"
 
     logger.info("Initiating Gemini API call.")
 
@@ -485,21 +597,31 @@ def generate_collateral(
     )
     resume_template = env.get_template("resume_template.md")
 
-    resume_markdown: str = resume_template.render(
-        contact=master_data.get("contact", {}),
-        professional_summary=gemini_output.get("professional_summary", ""),
-        skills_list=gemini_output.get("selected_skills", []),
-        experience=gemini_output.get("tailored_companies", []),
-        certifications=gemini_output.get("selected_certifications", []),
-        education=gemini_output.get("selected_education", []),
-        grouped_layout=grouped_layout,
-    )
+    def render_resume(contact: dict[str, str]) -> str:
+        """Renders the resume Markdown for the given contact block."""
+        return resume_template.render(
+            contact=contact,
+            headline=gemini_output.get("headline", ""),
+            career_years=span or "",
+            professional_summary=gemini_output.get("professional_summary", ""),
+            skills_list=gemini_output.get("selected_skills", []),
+            experience=gemini_output.get("tailored_companies", []),
+            certifications=gemini_output.get("selected_certifications", []),
+            education=gemini_output.get("selected_education", []),
+            grouped_layout=grouped_layout,
+        )
+
+    resume_markdown: str = render_resume(master_data.get("contact", {}))
 
     cl_markdown: str = ""
     if not master_mode:
         cover_letter_template = env.get_template("cover_letter_template.md")
         cl_markdown = cover_letter_template.render(
             contact=master_data.get("contact", {}),
+            letter_date=format_letter_date(date.today()),
+            company=meta.get("company_name", ""),
+            role=meta.get("role_title", ""),
+            hiring_manager=name_stated_in(meta.get("hiring_manager"), job_req_text),
             cover_letter_body=gemini_output.get("cover_letter_body", ""),
         )
 
@@ -533,7 +655,10 @@ def generate_collateral(
         )
 
     if validate:
-        ats_results: dict[str, Any] = validate_resume(job_req_text, resume_markdown, llm_engine)
+        # The ATS pass scores content and layout, so it gets the resume with a placeholder header.
+        ats_results: dict[str, Any] = validate_resume(
+            job_req_text, render_resume(ATS_PLACEHOLDER_CONTACT), llm_engine
+        )
 
         print_ats_validation_summary(ats_results)
 
@@ -601,7 +726,7 @@ def generate_collateral(
             "docx",
             outputfile=f"{prefix}_CoverLetter_{initials}.docx",
             format=PANDOC_INPUT_FORMAT,
-            extra_args=PANDOC_SAFETY_ARGS,
+            extra_args=["--reference-doc=resume_reference.docx", *PANDOC_SAFETY_ARGS],
         )
 
     if not preserve_markdown:
@@ -681,10 +806,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--grouped-layout",
-        action="store_true",
+        action=argparse.BooleanOptionalAction,
+        default=True,
         help=(
-            "Use the nested company layout (Company -> Roles). "
-            "Defaults to a flat chronological layout."
+            "Group roles under each employer. Use --no-grouped-layout for the flat "
+            "chronological layout."
         ),
     )
     parser.add_argument(

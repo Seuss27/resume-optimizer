@@ -223,6 +223,14 @@ def test_collect_output_segments_routes_slots() -> None:
     assert {"Python", "Acme", "BS", "Uni"} <= set(labels)
 
 
+def test_collect_output_segments_checks_the_headline_as_prose() -> None:
+    """The model-written headline goes through the unsupported-term check."""
+    from resume_optimizer.generate import collect_output_segments
+
+    prose, _, _ = collect_output_segments({"professional_summary": "S.", "headline": "Head line"})
+    assert prose == ["S.", "Head line", ""]
+
+
 def test_unscannable_document_is_set_aside_before_any_conversion(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
