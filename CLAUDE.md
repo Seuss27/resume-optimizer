@@ -11,10 +11,19 @@ under way is planned in [docs/proposals/pipeline-plan.md](docs/proposals/pipelin
 This repo follows the `glunk-works` way of working: the `way-of-working` plugin in
 `glunk-works/claude-workbench`. Its Global Conventions are in
 `plugins/way-of-working/reference/conventions.md`, and its session protocol is in
-`reference/workflow.md`. **The plugin isn't installed here yet.** It's still being built, and
-there's no `.ai/project.yml`. Until plan task F5, this file carries the parts that apply. Where
-this file is silent, `conventions.md` governs. Every local deviation is listed under
-*Deviations and known gaps*.
+`reference/workflow.md`. The plugin is pinned in `.claude/settings.json` and parameterised by
+[`.ai/project.yml`](.ai/project.yml). The project file is the single source for code paths, the
+green gate, the ruleset, agents and models. **Session flow:**
+- **Start:** run `/way-of-working:resume`. It rehydrates from `.ai/next-steps.md` and
+  `.ai/state.json`, never from memory.
+- **Before a PR:** run `/way-of-working:critic-gate` on any diff touching code paths.
+- **To open the PR:** run `/way-of-working:ship`.
+- **For a merge verdict:** run `/way-of-working:pr-checks`.
+- **Before switching model or session:** run `/way-of-working:handoff`.
+- **At sprint close:** run `/way-of-working:archive-sprint`.
+
+This file adds only what is specific to this repo. Where it is silent, `conventions.md`
+governs. Every local deviation is listed under *Deviations and known gaps*.
 
 - **One task, one issue, one branch, one PR.** A human approval gates every merge (the HITL
   Gate). Claude commits and pushes on a work branch and opens the PR. It never merges, never
@@ -46,7 +55,7 @@ this file is silent, `conventions.md` governs. Every local deviation is listed u
 | **Architect / Coder**: Claude Code session models | **analyst / interviewer / drafter / reviewer / line-editor / miner**: tool-less LLM roles that `ro` calls (plan §3.6) |
 | **critics** review *diffs* | the **reviewer** role reviews *a draft* against the ledger |
 | **Architect Review**, **HITL Gate**: PR checkpoints | **code gates** and **console human gates** in a run (plan §3.3) |
-| `.ai/`: the session cursor (from F5) | a run directory under `RO_RUNS_DIR` (plan §3.1) |
+| `.ai/`: the session cursor | a run directory under `RO_RUNS_DIR` (plan §3.1) |
 
 ## Areas
 
@@ -146,9 +155,9 @@ repo rather than suppressing the rule.
 | Tests not isolated from the repo root — vs this file | A1 |
 | Generated outputs and personal CSVs in the root (git-ignored) — vs this file | B2 makes paths configurable; the maintainer moves existing files; C6 retires the CSVs |
 | `GEMINI.md` conflicts with this file (50-char subjects, `style`, Python 3.10); this file wins | B1 |
-| PRs target `main`, with no `develop` integration branch, as in claude-workbench | permanent (`pr_base: main` at F5) |
+| PRs target `main`, with no `develop` integration branch, as in claude-workbench | permanent (`pr_base: main`) |
 | Branch prefixes cover every commit type, not only `feat\|fix\|chore\|docs` | permanent |
-| No `sprint/NN-slug` branches: one `<type>/<issue#>-<slug>` branch per issue, with sprints as milestones | permanent; check against the plugin's `ship` and `archive-sprint` at F5 |
+| No `sprint/NN-slug` branches: one `<type>/<issue#>-<slug>` branch per issue, with sprints as milestones | permanent; watch `ship` and `archive-sprint` for assumptions about `sprint/` branches |
 | The legacy generator sends career data to the provider `LLM_PROVIDER` selects (Gemini by default), before `RO-D13`'s allowlist exists | A2 strips contact fields and waits on the tier check; F4 retires the path |
 
 ## Load-bearing docs

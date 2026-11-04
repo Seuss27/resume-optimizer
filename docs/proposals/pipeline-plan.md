@@ -952,9 +952,10 @@ the maintainer approves it. That approval also confirms the RO-D wording.
   when the sprints are filed, not here.)
   - Adds a `pr-title` job: `pull_request` trigger, title passed through `env:`,
     `contents: read`, `deps` exempt.
-  - Adds a ruleset requiring `build-and-test (3.12)`, `(3.13)`, `(3.14)` and `pr-title`, in the
-    order `conventions.md` § *Prose economy* gives.
-  - Sets squash, merge-commit and auto-delete.
+  - Adds `pr-title` to the existing `main-required-checks` ruleset, which already requires
+    `build-and-test (3.12)`, `(3.13)` and `(3.14)` (created with F5). It follows the order
+    `conventions.md` § *Prose economy* gives: GitHub first, then `.ai/project.yml`.
+  - The squash-title, merge-commit and auto-delete settings were set with F5.
 
   *Done when:* `gh api repos/{repo}/rules/branches/main` lists the checks, and a malformed
   title fails.
@@ -970,8 +971,12 @@ the maintainer approves it. That approval also confirms the RO-D wording.
 - **F4 — Retire the legacy path.** Removes the legacy single-pass path and rewrites
   `readme.md`. *Done when:* `generate.py`'s single-call path is gone, and `ro tailor --master`
   passes its test.
-- **F5 — Adopt the plugin.** Adopts the `way-of-working` plugin once it ships
-  (`.ai/project.yml`, `pr_base: main`).
+- **F5 — Adopt the plugin.** Pins the `way-of-working` plugin in `.claude/settings.json` and
+  writes `.ai/project.yml` (with `identities: null` and `review.ci_gate: null`). Creates the
+  `main-required-checks` ruleset on GitHub first, then mirrors it, and seeds `.ai/next-steps.md`.
+  Pulled forward into S01 at the maintainer's request. *Done when:* the plugin's
+  `schema-complete.sh check` prints `complete`, `ruleset-drift.sh` reports no missing types or
+  checks, and `/way-of-working:resume` runs in this repo.
 - **F6 — Transfer.** The maintainer transfers the repo to `glunk-works`.
 
 ### Sprints
@@ -984,7 +989,7 @@ issue is the single list of the maintainer's follow-ups.
 
 | Sprint (milestone) | Tasks | Delivers |
 |---|---|---|
-| S01 — Stop the data loss, quick wins | A1, A2, A3, B1, maintainer prerequisites | better output from today's path |
+| S01 — Stop the data loss, quick wins | F5, A1, A2, A3, B1, maintainer prerequisites | the session protocol, then better output from today's path |
 | S02 — Foundation and de-risk | B2, B3, B4, B5, B6, B7 | packaging, credentials, the `claude -p` verdict |
 | S03 — Ledger core | C1a, C1b, C2, C3 | the private ledger, imported |
 | S04 — Grow the ledger | C4a, C5a, C6, A4 | the legacy path reads a grown ledger |
@@ -993,7 +998,7 @@ issue is the single list of the maintainer's follow-ups.
 | S07 — Render and MVP | D5, D6 (absorbs #21) | first `ro tailor` output |
 | S08 — Interview and control | D7, D8, D9 | interview, variants, redraft, verify |
 | S09 — Quality and speed | E1, E2, E3 | runs stats, base drafts, eval |
-| S10 — Hygiene and cutover | F1, F2, F3, F4, F5, F6 | CI rules, the mirror, retiring the legacy path |
+| S10 — Hygiene and cutover | F1, F2, F3, F4, F6 | CI rules, the mirror, retiring the legacy path |
 
 The maintainer prerequisites issue in S01 covers:
 

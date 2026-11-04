@@ -1,0 +1,102 @@
+# way-of-working plugin contract for this repo (plugin v0.30.0 schema).
+# Full key reference: reference/project-schema.md in glunk-works/claude-workbench at the pinned tag.
+# Every value below was read from this repo on 2026-11-04. The ruleset block mirrors a live
+# read-back of `GET /repos/Seuss27/resume-optimizer/rules/branches/main`. The check names are the
+# CI matrix job's own names.
+
+# ── identity ─────────────────────────────────────────────────────────────────
+repo: Seuss27/resume-optimizer
+pr_base: main
+migration_base: null   # no long-lived integration branch; every PR lands on main.
+
+# ── the deep record ──────────────────────────────────────────────────────────
+roadmap: docs/proposals/pipeline-plan.md   # the plan: design, phases, sprints. GitHub holds status.
+sprints_dir: sprints                       # declared but unused: planning.kind is github_milestones.
+threat_model: docs/proposals/pipeline-plan.md   # §3.7 trust boundaries, §3.8 writes and credentials, §5 risks.
+
+planning:
+  kind: github_milestones   # one sprint = one milestone (S01–S10). Its issues are the task list.
+
+decisions:
+  log: docs/decisions.md
+  prefix: RO-D
+
+backlog:
+  kind: github_issues
+  repo: null              # this repo. It is PUBLIC: no issue may carry personal data (CLAUDE.md rule 4).
+  path: null
+  item_prefix: null
+
+load_bearing_docs:
+  - CLAUDE.md
+  - readme.md
+  - docs/decisions.md
+  - docs/proposals/pipeline-plan.md
+  - .ai/next-steps.md
+
+# ── what counts as a behavior change ─────────────────────────────────────────
+code_paths:
+  - src/
+  - tests/
+  - .claude/
+  - .github/
+  - .ai/project.yml
+  - pyproject.toml
+  - .gitignore              # the main guard against personal data being committed
+  - .pre-commit-config.yaml
+  - system_prompt.txt       # root prompts and templates, until B2 and D5 move or remove them
+  - ats_prompt.txt
+  - desirability_prompt.txt
+  - resume_template.md
+  - cover_letter_template.md
+  - tune_template.py
+
+# ── the local green gate ─────────────────────────────────────────────────────
+# A local pre-check; CI on the PR is the gate of record. Until A1 (#30) lands, the test step
+# writes and deletes temp_resume.md / temp_cl.md in the repo root (CLAUDE.md, green gate).
+gates:
+  green:
+    - { run: hatch run test }
+    - { run: hatch run lint }
+    - { run: hatch run format --check }
+
+# ── branch protection ────────────────────────────────────────────────────────
+# `main-required-checks` (ruleset id 26540407), created 2026-11-04, `enforcement: active`, no
+# bypass actors, targeting the default branch. F1 (#63) adds `pr-title` to it on GitHub first,
+# and only then here.
+ruleset:
+  name: main-required-checks
+  rule_types: [deletion, non_fast_forward, pull_request, required_status_checks]
+  required_checks:
+    - "build-and-test (3.12)"
+    - "build-and-test (3.13)"
+    - "build-and-test (3.14)"
+rulesets:
+  - name: main-required-checks
+    source: repo
+    rule_types: [deletion, non_fast_forward, pull_request, required_status_checks]
+    required_checks:
+      - "build-and-test (3.12)"
+      - "build-and-test (3.13)"
+      - "build-and-test (3.14)"
+
+# ── the fresh-session review gate ────────────────────────────────────────────
+review:
+  ci_gate: null   # no review CI gate yet (identities: null). /way-of-working:critic-gate is the
+                  # standing critic look, and the maintainer's merge is the remaining gate.
+
+# ── agents ───────────────────────────────────────────────────────────────────
+agents:
+  enabled: [architect, coder, security-critic, docs-consistency]
+  diff_rule: null   # critic-gate proposes; the maintainer picks.
+models:
+  architect: opus
+  coder: sonnet
+  second_opinion: null   # no different-model round offered by default.
+
+# ── the sprint-orchestrator loop ─────────────────────────────────────────────
+orchestration: null   # the loop never dispatches into this repo.
+
+# ── declared identities ──────────────────────────────────────────────────────
+identities: null   # not cut over to App identities. Work runs as the maintainer, Seuss27.
+                   # Revisit when the repo moves to glunk-works (F6, #68).
