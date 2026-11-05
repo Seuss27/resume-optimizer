@@ -59,7 +59,7 @@ def read_tags(path: Path, label: str) -> list[str]:
     tags: list[str] = []
     for line in path.read_text(encoding="utf-8").splitlines():
         name: str = line.strip("\r")
-        if not name.startswith("v"):
+        if not name.strip().startswith("v"):
             continue
         if TAG.fullmatch(name) is None:
             raise Refusal(f"tags: a tag in the {label} list is not a bare v major.minor.patch")
@@ -136,7 +136,7 @@ def main(argv: list[str]) -> int:
     args = parser.parse_args(argv)
     try:
         version, tag, previous = plan(args)
-    except (Refusal, SyntaxError, OSError, UnicodeDecodeError) as error:
+    except (Refusal, SyntaxError, ValueError, OSError) as error:
         print(f"release_plan: {error}", file=sys.stderr)
         return 1
     sys.stdout.write(f"version={version}\ntag={tag}\nprevious={previous}\n")

@@ -48,7 +48,8 @@ def check_versions(wheel: Path, package_version: str) -> None:
     """The installed metadata and the wheel file name must both carry the package version."""
     if importlib.metadata.version("resume-optimizer") != package_version:
         fail("the installed metadata version differs from the package __version__")
-    if wheel.name.split("-")[1] != package_version:
+    fields: list[str] = wheel.name.split("-")
+    if len(fields) < 2 or fields[1] != package_version:
         fail("the wheel file name's version differs from the package __version__")
 
 

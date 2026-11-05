@@ -219,7 +219,7 @@ tag rulesets enforce it: `protected-release-tags` stops anyone moving or deletin
 that CI's smoke step tested, CI's SBOM and a `SHA256SUMS` file. The SBOM describes CI's
 development environment, not the wheel's runtime closure. The wheel also carries a build
 provenance attestation, verified against the release workflow on `main`. The changelog section
-for the version is the release's notes. A published tag is never moved or reused, and a defect is
+for the version, followed by the commit subjects since the previous tag, is the release's notes. A published tag is never moved or reused, and a defect is
 fixed by the next version. **Why:** installs pin a tag, so it must name a reviewed commit on
 `main` and never change, and a hand-made tag can disagree with the code it names.
 

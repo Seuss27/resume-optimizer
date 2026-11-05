@@ -46,7 +46,7 @@ jobs:
     needs: guard
     permissions:
       contents: read
-    uses: $/.github/workflows/ci.yml
+    uses: ./.github/workflows/ci.yml # zizmor: ignore[self-repository]
 
   release:
     needs: ci
@@ -106,7 +106,12 @@ jobs:
       - name: Plan the release
         id: plan
         run: |
-          wheel=$(basename "$RUNNER_TEMP"/in/wheel/*.whl)
+          set -- "$RUNNER_TEMP"/in/wheel/*.whl
+          if [ "$#" -ne 1 ] || [ ! -f "$1" ]; then
+            echo "::error::expected exactly one wheel"
+            exit 1
+          fi
+          wheel=$(basename "$1")
           python .github/scripts/release_plan.py \
             --init src/resume_optimizer/__init__.py \
             --wheel "$wheel" \
@@ -120,7 +125,9 @@ jobs:
         if: ${{ steps.plan.outputs.previous != '' }}
         env:
           PREVIOUS: ${{ steps.plan.outputs.previous }}
-        run: git log --format='- %s' "$PREVIOUS..HEAD" >> "$RUNNER_TEMP/notes.md"
+        run: |
+          # An @ in a subject would notify that account when GitHub renders the notes.
+          git log --format='- %s' "$PREVIOUS..HEAD" | sed 's/@/(at)/g' >> "$RUNNER_TEMP/notes.md"
 
       - name: Gather the assets and the checksums
         run: |
@@ -182,6 +189,14 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           RELEASE_ID: ${{ steps.draft.outputs.id }}
+          TAG: ${{ steps.plan.outputs.tag }}
         run: |
           gh api --method PATCH "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" \
             -F draft=false > /dev/null
+          # The tag must name the release commit. A tag that appeared after the plan step would
+          # make the publish attach this wheel to a different commit.
+          sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" --jq .object.sha)
+          if [ "$sha" != "$GITHUB_SHA" ]; then
+            echo "::error::the published tag does not name the release commit"
+            exit 1
+          fi

@@ -130,7 +130,7 @@ task. A tool install does not carry everything:
   from a directory that holds your own reference document. The CLAUDE.md *Deviations and known
   gaps* entry on the working directory says why and when that ends.
 - The example CSVs come from the repository, at the same tag.
-- Store your API key with the installed `keyring` command, as in the next section, using the same
+- Store your API key with the installed `keyring` command, as in *Configuration & Security* below, using the same
   service and username (`resume-optimizer`, `gemini-api-key`). The missing-key error's own hint
   names the module form of the command, which does not apply under this option.
 
@@ -139,7 +139,7 @@ task. A tool install does not carry everything:
 The steps only. `RO-D18` in [docs/decisions.md](docs/decisions.md) holds the rules and the why.
 
 1. In one PR, bump the version in `src/resume_optimizer/__init__.py` and move the changelog's
-   unreleased entries into a section for that version.
+   unreleased entries into a section for that version, headed `## [X.Y.Z] - YYYY-MM-DD`.
 2. After the squash merge, the maintainer dispatches the release workflow from `main` with the
    dry run left on, approves the `release` environment, and reads the printed plan and notes.
 3. Dispatch again with the dry run off.
