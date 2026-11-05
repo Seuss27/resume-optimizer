@@ -1,20 +1,20 @@
 # Next steps
 
-**Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `implementing`. Task #39 (plan task
-B6, the `claude -p` runtime spike) has a spec comment and is anchored.
+**Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `implementing`. Task #38 (plan task
+B5, credentials) has a spec comment and is anchored.
 
 **Just done:**
-- The maintainer ran the live B6 measurements. Item 4 failed on `CLAUDE.md` only, so reviewer
-  `support` mode moves to `--bare` with an API key (`RO-D17`). Every other role stays on the
-  subscription. Item 1 passed on the reading that built-in plugins, agents and the default style
-  are allowed.
-- Wrote `docs/spikes/b6-claude-code-runtime.md`, `RO-D17` and the plan §3.6 and §3.7 edits.
-  - Its critic pass (`architect`, `security-critic`, `docs-consistency`) converged in 3 rounds.
+- The #39 B6 spike result merged (#123, `2f68583`).
+- Drafted the #38 spec and posted it on the issue (comment 6665138622). Its critic pass
+  (`architect`, `security-critic`, `docs-consistency`) ran 3 rounds and converged.
 
-**Next:** merge the #39 PR (the maintainer's call), then pick the next S02 task. Assigned model:
-**sonnet** (coder).
+**Next:** task #38 — build B5 from the spec comment
+https://github.com/Seuss27/resume-optimizer/issues/38#issuecomment-6665138622, in a fresh
+session. Assigned model: **sonnet** (coder). The spec's grep condition means no text outside
+`docs/` may name the old `.env` loader package, this ledger included.
 
-**HITL Gate: NONE OPEN** — next gate: the maintainer merges the #39 PR
+**HITL Gate: OPEN** — first anchor for milestone 2: the maintainer confirms S02 works from
+milestone 2 and approves the #38 spec comment
 
 **Open for the owner (non-blocking):**
 - After `RO-D17`, the plan header's "`RO-D1`..`RO-D16`" range and §3.8's subscription sentence are
