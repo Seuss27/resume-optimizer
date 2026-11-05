@@ -3,14 +3,14 @@
 **Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `implementing`.
 
 **Just done:**
-- #94 merged: `.ai/` is out of `agents.diff_rule`, so a cursor-sync PR no longer selects critics
-  by rule.
+- #94 merged: `.ai/next-steps.md` is out of `agents.diff_rule`, so a cursor-sync PR now selects
+  only `docs-consistency` by rule.
 - Drafted the spec for task #36 (B3) with `/way-of-working:spec-task 36` and posted it as
   comment 6647737626 on #36. Its critic pass (architect, security-critic, docs-consistency) ran
   2 rounds and converged. The maintainer approved it with a reaction.
 - What the spec decides beyond the issue text: B3 drops 3.12 and 3.13 from the CI matrix, since
-  the new floor forces it, and edits plan B3 and the `.ai/project.yml` comment to match. The
-  `--score-job` preferences now follow `LLM_PROVIDER`. The boundary test bans importing
+  the new floor forces it, and edits plan B3 and the `.ai/project.yml` comment to match. B3
+  routes the `--score-job` preferences through `LLM_PROVIDER` and updates the CLAUDE.md row. The boundary test bans importing
   `google.genai` outside `adapters.py`. Its last section lists every such choice.
 
 **Next:** task #36 — build plan task B3 from its spec comment
