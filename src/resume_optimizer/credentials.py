@@ -34,7 +34,8 @@ def get_credential(name: str) -> str:
     Raises:
         ValueError: `name` is not a known credential.
         MissingCredentialError: The entry is missing, empty or malformed (surrounding
-            whitespace or a control character), or the keyring is unusable.
+            whitespace, a control character or a non-ASCII character), or the keyring is
+            unusable.
     """
     if name not in _USERNAMES:
         raise ValueError(f"Unknown credential name: {name!r}")
@@ -60,6 +61,7 @@ def get_credential(name: str) -> str:
     if value != value.strip() or not (value.isascii() and value.isprintable()):
         raise MissingCredentialError(
             f"The stored credential {SERVICE_NAME}/{username} is malformed (surrounding "
-            f"whitespace or a control character). Store it again with: {hint}"
+            f"whitespace, a control character or a non-ASCII character). "
+            f"Store it again with: {hint}"
         )
     return value
