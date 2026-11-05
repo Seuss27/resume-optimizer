@@ -151,15 +151,15 @@ repo rather than suppressing the rule.
 
 | Item | Removed by |
 |---|---|
-| `requires-python >=3.10`, ruff target `py310`, rules `E,F,I,S` (no `B`), CI on 3.12–3.14; the target is 3.14 (3.15 advisory) — vs conventions and the target | B3 |
+| No advisory Python 3.15 CI job yet | B8 |
 | Credentials from `.env` / plain env vars, not the keyring — vs conventions | B5 |
 | Importing `generate.py` runs `load_dotenv()`, which reads the root `.env` (credentials, `LLM_PROVIDER`) into the test process — vs the rule that tests never read the repo root | B5 |
-| Unpinned dependencies; no SBOM, dependency audit, secrets scan, workflow lint or PR-title check — vs conventions and the glunk-works repos | B8 |
+| Unpinned dependencies other than ruff; no SBOM, dependency audit, secrets scan, workflow lint or PR-title check — vs conventions and the glunk-works repos | B8 |
 | The working directory (the checkout root under the readme's Hatch flow) still receives the log file and `tune_template.py`'s outputs, and still supplies the pandoc reference document and `tune_template.py`'s tracked input — vs this file | B4 moves the log file to `RO_LOG_DIR`, D5 removes `tune_template.py`, F4 the legacy path that reads the reference document. The CSVs and `master_data.json` now live in `RO_LEDGER_DIR`, and C6 retires them |
 | PRs target `main`, with no `develop` integration branch, as in claude-workbench | permanent (`pr_base: main`) |
 | Branch prefixes cover every commit type, not only `feat\|fix\|chore\|docs` | permanent |
 | No `sprint/NN-slug` branches: one `<type>/<issue#>-<slug>` branch per issue, with sprints as milestones | permanent; watch `ship` and `archive-sprint` for assumptions about `sprint/` branches |
-| The legacy generator sends career data to the provider `LLM_PROVIDER` selects (Gemini by default), before `RO-D13`'s allowlist exists; the generation and ATS calls carry no contact block, but `--score-job` still sends the `Pref_*` preferences, always to Gemini | F4 retires the path |
+| The legacy generator sends career data to the provider `LLM_PROVIDER` selects (Gemini by default), before `RO-D13`'s allowlist exists; the generation and ATS calls carry no contact block, but `--score-job` still sends the `Pref_*` preferences, to the provider `LLM_PROVIDER` selects like the other calls | F4 retires the path |
 
 ## Load-bearing docs
 

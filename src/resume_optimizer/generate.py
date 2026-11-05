@@ -12,8 +12,6 @@ from typing import Any
 
 import pypandoc
 from dotenv import load_dotenv
-from google import genai
-from google.genai import types
 
 from resume_optimizer import paths, resources
 from resume_optimizer.adapters import BedrockAdapter, GeminiAdapter, MockLLMAdapter
@@ -155,12 +153,15 @@ def validate_resume(
     return result
 
 
-def evaluate_desirability(job_req_text: str, preferences: dict[str, str]) -> dict[str, Any]:
-    """Evaluates a job req against the user's personal job preferences using Gemini.
+def evaluate_desirability(
+    job_req_text: str, preferences: dict[str, str], llm_engine: LLMEngineInterface
+) -> dict[str, Any]:
+    """Evaluates a job req against the user's personal job preferences.
 
     Args:
         job_req_text: The source job description.
         preferences: A dictionary mapping preference keys to required values.
+        llm_engine: The provider-agnostic engine that performs the call.
 
     Returns:
         A dictionary containing the desirability score, match analyses, pros, and cons.
@@ -180,33 +181,17 @@ def evaluate_desirability(job_req_text: str, preferences: dict[str, str]) -> dic
         "required": ["desirability_score", "salary_match", "remote_match", "pros", "cons"],
     }
 
-    http_options: types.HttpOptions = types.HttpOptions(
-        retry_options=types.HttpRetryOptions(
-            initial_delay=2.0,
-            attempts=5,
-            http_status_codes=[429, 500, 502, 503, 504],
-        )
-    )
-    client: genai.Client = genai.Client(http_options=http_options)
-
     user_prompt: str = (
         f"User Preferences:\n{json.dumps(preferences, indent=2)}\n\n"
         f"Job Requisition:\n{job_req_text}"
     )
 
-    logger.info("Initiating job desirability evaluation Gemini API call.")
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=user_prompt,
-        config=types.GenerateContentConfig(
-            system_instruction=desirability_prompt,
-            response_mime_type="application/json",
-            response_schema=response_schema,
-            temperature=0.2,
-        ),
+    logger.info("Initiating job desirability evaluation call.")
+    result: dict[str, Any] = llm_engine.generate_structured_content(
+        prompt=user_prompt,
+        response_schema=response_schema,
+        system_instruction=desirability_prompt,
     )
-
-    result: dict[str, Any] = json.loads(response.text or "{}")
     return result
 
 
@@ -632,7 +617,7 @@ def generate_collateral(
         return run_dirs[0]
 
     if evaluate_job:
-        eval_results: dict[str, Any] = evaluate_desirability(job_req_text, preferences)
+        eval_results: dict[str, Any] = evaluate_desirability(job_req_text, preferences, llm_engine)
         print_desirability_summary(eval_results)
 
         desirability_file: Path = run_dir() / f"{prefix}_desirability_{initials}.txt"

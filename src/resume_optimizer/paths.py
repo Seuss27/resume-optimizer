@@ -56,7 +56,7 @@ def refuse_in_repo(path: str | Path, label: str = "data path") -> Path:
     """
     try:
         resolved: Path = Path(path).expanduser().resolve()
-    except (OSError, RuntimeError):
+    except OSError, RuntimeError:
         # The system's own message names the path, which can carry the user name.
         raise DataPathRefusedError(f"{label} cannot be resolved to a real path.") from None
     for candidate in (resolved, *resolved.parents):

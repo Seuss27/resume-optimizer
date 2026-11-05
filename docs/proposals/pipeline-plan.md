@@ -701,8 +701,9 @@ the maintainer approves it. That approval also confirms the RO-D wording.
   - The `B` findings fixed.
   - `evaluate_desirability` routed through the adapter.
 
-  The CI matrix change belongs to B8. *Done when:* a test fails if `genai.Client` is
-  constructed outside `adapters.py`, and `hatch run lint` passes under the new rules.
+  B3 drops 3.12 and 3.13 from the CI matrix, which the new floor forces; the rest of the
+  CI change, `test-py315` included, belongs to B8. *Done when:* a test fails if `google.genai` is
+  imported or referenced outside `adapters.py`, and `hatch run lint` passes under the new rules.
 - **B4 — Logging.** Logs go to `RO_LOG_DIR`, third-party loggers are set to WARNING, `extra`
   keys pass through an allowlist, and the bug template gets a PII warning. *Done when:* known
   resume text is absent from a logged run.

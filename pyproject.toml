@@ -7,15 +7,11 @@ name = "resume-optimizer"
 dynamic = ["version"]
 description = "A 'Resume-as-Code' pipeline using Gemini API, Jinja2, and Pandoc"
 readme = "readme.md"
-requires-python = ">=3.10"
+requires-python = ">=3.14"
 authors = [{ name = "Jared Groves", email = "jgroves27@gmail.com" }]
 keywords = ["resume", "automation", "llm", "gemini", "pandoc", "jinja2", "ats",]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
     "Operating System :: OS Independent",
 ]
@@ -25,7 +21,7 @@ dependencies = ["google-genai", "Jinja2", "pandas", "pypandoc", "python-dotenv",
 Repository = "https://github.com/Seuss27/resume-optimizer"
 
 [project.optional-dependencies]
-dev = ["pytest", "ruff"]
+dev = ["pytest", "ruff==0.15.20"]
 
 # Define clean CLI entry points mapping directly to your functions
 [project.scripts]
@@ -33,16 +29,13 @@ generate-resume = "resume_optimizer.generate:main"
 build-resume-state = "resume_optimizer.build_state:main"
 
 [tool.ruff]
-# Target your minimum supported Python version
-target-version = "py310"
+# Target the minimum supported Python version
+target-version = "py314"
 line-length = 100
 
 [tool.ruff.lint]
-# Enable rulesets replacing your entire tool suite:
-# E/F = Flake8 (errors/warnings)
-# I = Isort (import sorting)
-# S = Bandit (security checks)
-select = ["E", "F", "I", "S"]
+# E/F = pycodestyle/pyflakes, I = isort, B = bugbear, S = bandit
+select = ["E", "F", "I", "B", "S"]
 
 # Configure precise rule exclusions
 ignore = [] # Keep this empty so production code is strictly checked
@@ -66,7 +59,7 @@ line-ending = "auto"
 path = "src/resume_optimizer/generate.py"
 
 [tool.hatch.envs.default]
-dependencies = ["pytest", "ruff"]
+dependencies = ["pytest", "ruff==0.15.20"]
 
 [tool.hatch.envs.default.scripts]
 test = "pytest {args:tests}"
