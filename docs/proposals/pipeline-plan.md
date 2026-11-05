@@ -750,8 +750,9 @@ the maintainer approves it. That approval also confirms the RO-D wording.
     through `env:`.
   - **`ruleset-drift` workflow:** a daily scheduled check that `main-required-checks` still
     holds.
-  - **Workflow hygiene:** every action is pinned by commit SHA with a version comment. Each
-    workflow has a top-level `permissions: contents: read` and sets `persist-credentials: false`.
+  - **Workflow hygiene:** every action is pinned by commit SHA with a version comment. A
+    workflow has a top-level `permissions` of at most `contents: read` and sets
+    `persist-credentials: false` on every checkout; the secrets-scan caller has no checkout of its own.
   - **Dependabot:** pip runs daily with a `chore` prefix, and GitHub Actions weekly with a `ci`
     prefix, both with `include: scope`, so every Dependabot PR title passes `pr-title`. The
     rule that ignored major versions is dropped.

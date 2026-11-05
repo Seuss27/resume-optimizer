@@ -44,6 +44,9 @@ code_paths:
   - pyproject.toml
   - .gitignore              # the main guard against personal data being committed
   - .pre-commit-config.yaml
+  - betterleaks.toml        # absent on purpose: the org scan reads it, and the ignore file below, from the
+  - .betterleaksignore      # PR's base commit, so a change that silences it needs a critic's look
+  - .gitattributes          # likewise absent: it can hide files from a scan
   - tune_template.py        # stays until D5 removes it
 
 # ── the local green gate ─────────────────────────────────────────────────────
