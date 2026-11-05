@@ -204,3 +204,29 @@ means zero tools, MCP servers, skills and slash commands in the init event, and 
 built-in plugins, agents and output style; the plan's wording of zero in every category cannot be
 met, because the built-ins are always listed. The maintainer accepted that reading, and D1's check
 will assert it.
+
+## RO-D18 — Releases are dispatched from `main`, never tagged by hand
+
+*Decided 2026-11-05 (maintainer).*
+A release is cut by dispatching the `release` workflow from `main`, never by pushing a tag. The
+tag is derived from the version in the package `__init__.py`, and it comes into existence only
+when the draft release is published. Every `ci.yml` job re-runs at the release commit. The
+`release` environment's main-only deployment branch policy, with the maintainer as required
+reviewer, is the control, because the release App's key lives only there. The workflow's own
+branch guard only fails fast. The release App is the only identity that creates `v` tags, and two
+tag rulesets enforce it: `protected-release-tags` stops anyone moving or deleting a `v` tag, and
+`release-tag-creation` lets only the App create one. A release carries three assets: the wheel
+that CI's smoke step tested, CI's SBOM and a `SHA256SUMS` file. The SBOM describes CI's
+development environment, not the wheel's runtime closure. The wheel also carries a build
+provenance attestation, verified against the release workflow on `main`. The changelog section
+for the version, followed by the commit subjects since the previous tag, is the release's notes. A published tag is never moved or reused, and a defect is
+fixed by the next version. **Why:** installs pin a tag, so it must name a reviewed commit on
+`main` and never change, and a hand-made tag can disagree with the code it names.
+
+Residuals:
+- The ruleset drift check reads the branch rules only, so the tag rulesets are not drift-checked.
+- The wheel is built in a job that uses the pip cache and an unhashed build backend, so the
+  attestation covers the built bytes, not a hermetic build.
+- A process running as the maintainer can dispatch and approve a release, an instance of plan §5's
+  accepted residual. The `CLAUDE.md` clause and the `gh workflow run` deny rules in
+  `.claude/settings.json` are conventions against it, not controls.

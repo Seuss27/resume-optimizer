@@ -8,6 +8,7 @@
   "permissions": {
     "deny": [
       "Bash(gh pr merge:*)", "PowerShell(gh pr merge:*)",
+      "Bash(gh workflow run:*)", "PowerShell(gh workflow run:*)",
       "Bash(git push --force:*)", "PowerShell(git push --force:*)",
       "Bash(git push --force-with-lease:*)", "PowerShell(git push --force-with-lease:*)",
       "Bash(git push -f:*)", "PowerShell(git push -f:*)",

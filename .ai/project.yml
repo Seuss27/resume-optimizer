@@ -101,7 +101,7 @@ agents:
   # left out on purpose and gets docs-consistency only (CLAUDE.md, critic table). A new tracked
   # path under .ai/ must be added below, or it gets no architect or security-critic. Interim until
   # the review CI gate (#88).
-  diff_rule: [docs/, .ai/parked/, .ai/context/, CLAUDE.md, readme.md, example_, dummy_gemini_output.json]
+  diff_rule: [docs/, .ai/parked/, .ai/context/, CLAUDE.md, CHANGELOG.md, readme.md, example_, dummy_gemini_output.json]
 models:
   architect: opus
   coder: sonnet

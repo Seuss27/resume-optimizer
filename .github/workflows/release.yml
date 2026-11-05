@@ -1,0 +1,213 @@
+name: Release
+
+# A release is cut by dispatching this workflow from the default branch, never by pushing a tag
+# (RO-D18). The tag is derived from the version in the package __init__.py and comes into
+# existence only when the draft release is published. Dispatch with the dry run left on first:
+# it does everything except attest, create, upload and publish.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Plan only: print the tag and the notes and create nothing"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  # A branch copy of this file can delete this job, so it is a fast, clear failure and not the
+  # control. The control is the `release` environment's main-only deployment branch policy,
+  # because the App key exists only there.
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require a dispatch from the default branch
+        env:
+          REF: ${{ github.ref }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          if [ -z "$DEFAULT_BRANCH" ]; then
+            echo "::error::the default branch could not be resolved"
+            exit 1
+          fi
+          if [ "$REF" != "refs/heads/$DEFAULT_BRANCH" ]; then
+            echo "::error::a release is dispatched from the default branch only"
+            exit 1
+          fi
+
+  # Every ci.yml job re-runs at the release commit, with no list to keep in step.
+  ci:
+    needs: guard
+    permissions:
+      contents: read
+    uses: ./.github/workflows/ci.yml # zizmor: ignore[self-repository]
+
+  release:
+    needs: ci
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python 3.14
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+
+      - name: Download the tested wheel
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: wheel
+          path: ${{ runner.temp }}/in/wheel
+
+      - name: Download the SBOM
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: sbom
+          path: ${{ runner.temp }}/in/sbom
+
+      - name: List the existing and the merged tags
+        run: |
+          git tag --list 'v*' > "$RUNNER_TEMP/all-tags.txt"
+          git tag --list 'v*' --merged HEAD > "$RUNNER_TEMP/merged-tags.txt"
+
+      # Minted on every run, so a dry run also exercises the minting. The token reaches a step
+      # only as that step's own GH_TOKEN, never through job-level env or GITHUB_ENV.
+      - name: Mint the release App token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
+
+      # A contents-read token cannot see drafts, so this read uses the App token.
+      - name: List the draft releases
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          gh api --paginate "repos/$GITHUB_REPOSITORY/releases" \
+            --jq '.[] | select(.draft) | .tag_name' > "$RUNNER_TEMP/draft-tags.txt"
+
+      - name: Plan the release
+        id: plan
+        run: |
+          set -- "$RUNNER_TEMP"/in/wheel/*.whl
+          if [ "$#" -ne 1 ] || [ ! -f "$1" ]; then
+            echo "::error::expected exactly one wheel"
+            exit 1
+          fi
+          wheel=$(basename "$1")
+          python .github/scripts/release_plan.py \
+            --init src/resume_optimizer/__init__.py \
+            --wheel "$wheel" \
+            --changelog CHANGELOG.md \
+            --all-tags "$RUNNER_TEMP/all-tags.txt" \
+            --merged-tags "$RUNNER_TEMP/merged-tags.txt" \
+            --draft-tags "$RUNNER_TEMP/draft-tags.txt" \
+            --notes "$RUNNER_TEMP/notes.md" >> "$GITHUB_OUTPUT"
+
+      - name: Append the commit subjects
+        if: ${{ steps.plan.outputs.previous != '' }}
+        env:
+          PREVIOUS: ${{ steps.plan.outputs.previous }}
+        run: |
+          set -o pipefail
+          # An @ in a subject would notify that account when GitHub renders the notes.
+          git log --format='- %s' "$PREVIOUS..HEAD" | sed 's/@/(at)/g' >> "$RUNNER_TEMP/notes.md"
+
+      - name: Gather the assets and the checksums
+        run: |
+          mkdir "$RUNNER_TEMP/assets"
+          cp "$RUNNER_TEMP"/in/wheel/*.whl "$RUNNER_TEMP/in/sbom/sbom.cdx.json" "$RUNNER_TEMP/assets/"
+          cd "$RUNNER_TEMP/assets"
+          sha256sum -- *.whl sbom.cdx.json > SHA256SUMS
+
+      - name: Print the plan and the notes
+        env:
+          TAG: ${{ steps.plan.outputs.tag }}
+          PREVIOUS: ${{ steps.plan.outputs.previous }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          echo "dry run: $DRY_RUN"
+          echo "tag:      $TAG"
+          echo "commit:   $GITHUB_SHA"
+          echo "previous: ${PREVIOUS:-none}"
+          echo "--- release notes ---"
+          cat "$RUNNER_TEMP/notes.md"
+          echo "--- assets ---"
+          ls -l "$RUNNER_TEMP/assets"
+
+      - name: Attest the wheel's build provenance
+        if: ${{ !inputs.dry_run }}
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: ${{ runner.temp }}/assets/*.whl
+
+      # The tag does not exist until the draft is published, so a failure before that leaves at
+      # most a draft and no tag. A rerun refuses in the plan step until the draft is deleted.
+      - name: Create the draft release
+        id: draft
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          TAG: ${{ steps.plan.outputs.tag }}
+        run: |
+          id=$(gh api --method POST "repos/$GITHUB_REPOSITORY/releases" \
+            -f tag_name="$TAG" -f target_commitish="$GITHUB_SHA" -f name="$TAG" \
+            -F body=@"$RUNNER_TEMP/notes.md" -F draft=true --jq .id)
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+
+      - name: Upload the assets
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          RELEASE_ID: ${{ steps.draft.outputs.id }}
+        run: |
+          for file in "$RUNNER_TEMP"/assets/*; do
+            name=$(basename "$file")
+            gh api --method POST \
+              "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets?name=$name" \
+              -H "Content-Type: application/octet-stream" --input "$file" > /dev/null
+          done
+
+      - name: Publish the release
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          RELEASE_ID: ${{ steps.draft.outputs.id }}
+          TAG: ${{ steps.plan.outputs.tag }}
+        run: |
+          # Publishing a draft for a tag that already exists attaches the release to that tag's
+          # commit, so require that the tag is absent while the release is still a draft. Only a
+          # 404 passes; any other failure stops here, where the draft can still be deleted.
+          if out=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" 2>&1); then
+            echo "::error::the tag already exists; delete the draft and bump the version"
+            exit 1
+          fi
+          case "$out" in
+            *"HTTP 404"*) ;;
+            *) echo "::error::could not confirm the tag is absent"; exit 1 ;;
+          esac
+          gh api --method PATCH "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" \
+            -F draft=false > /dev/null
+          # After the publish this is an alarm, not a guard: the tag now exists.
+          sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" --jq .object.sha)
+          if [ "$sha" != "$GITHUB_SHA" ]; then
+            echo "::error::the published tag does not name the release commit"
+            exit 1
+          fi

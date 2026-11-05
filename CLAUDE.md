@@ -27,6 +27,7 @@ governs. Every local deviation is listed under *Deviations and known gaps*.
 
 - **One task, one issue, one branch, one PR.** A human approval gates every merge (the HITL
   Gate). Claude commits and pushes on a work branch and opens the PR. It never merges, never
+  dispatches the release workflow or approves a deployment to the `release` environment, never
   pushes to `main`, and never force-pushes a branch that has been pushed without asking first.
 - **Model routing is manual.** The Architect (Opus) plans, reviews and makes boundary calls.
   The Coder (Sonnet) executes a defined task and runs the green gate. Reviews happen in a
