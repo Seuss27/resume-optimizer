@@ -71,6 +71,8 @@ ruleset:
     - sbom
     - zizmor
     - pr-title
+    - secrets / scan
+  check_integrations: {"secrets / scan": 15368}
 rulesets:
   - name: main-required-checks
     source: repo
@@ -82,6 +84,8 @@ rulesets:
       - sbom
       - zizmor
       - pr-title
+      - secrets / scan
+    check_integrations: {"secrets / scan": 15368}
 
 # ── the fresh-session review gate ────────────────────────────────────────────
 review:
