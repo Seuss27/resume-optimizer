@@ -12,7 +12,8 @@ B5, credentials) is built and open as PR #125, awaiting the maintainer's merge.
   because the HTTP library quotes such a value in an error. The PR body says so.
 
 **Next:** merge PR #125 (the maintainer's call; this repo has no review CI gate and auto-merge is
-off). Then the next S02 task from milestone 2, in the plan's order, gets its spec drafted.
+off). Then #40 (B7, a release process) is the next task to get a spec; #68 (F6, the transfer) stays with
+the maintainer.
 Assigned model: **opus** (architect) for the spec.
 
 **HITL Gate: OPEN** — the maintainer merges PR #125
