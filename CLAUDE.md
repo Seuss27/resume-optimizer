@@ -43,7 +43,7 @@ governs. Every local deviation is listed under *Deviations and known gaps*.
   | anything under `code_paths` in `.ai/project.yml` | `architect` and `security-critic` |
   | any path under an `agents.diff_rule` entry in `.ai/project.yml`: tracked paths that can carry rule-4 content, and the agent instructions | `architect` and `security-critic` |
   | any `.md` file, or a load-bearing doc (below) | `docs-consistency` |
-  | a `.md` file outside rows 1–2, or anything else the rule does not select, that could carry personal data (a new doc on credentials, data handling or operations) | `security-critic`, named on the invocation line |
+  | a `.md` file outside rows 1–2, or anything else the rule does not select, that could carry personal data (a new doc on credentials, data handling or operations); the cursor ledger `.ai/next-steps.md` selects only `docs-consistency` by rule, so name `security-critic` when a sync quotes or summarises anything on rule 4's list | `security-critic`, named on the invocation line |
 
   The pass ends when a round returns only tightenings. Never stop on the round that applied
   fixes. After 4 fix-and-re-run rounds, the decision goes back to the human. A plan goes
