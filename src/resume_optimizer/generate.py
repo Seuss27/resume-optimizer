@@ -17,7 +17,7 @@ from resume_optimizer import paths, resources
 from resume_optimizer.adapters import BedrockAdapter, GeminiAdapter, MockLLMAdapter
 from resume_optimizer.checks import UnsupportedReport, check_unsupported
 from resume_optimizer.interfaces import LLMEngineInterface
-from resume_optimizer.logging_setup import get_logger
+from resume_optimizer.logging_setup import get_logger, setup_logging
 from resume_optimizer.render import (
     DocumentRefusedError,
     PdfConversionError,
@@ -837,6 +837,7 @@ def _main() -> None:
     """Runs the pipeline for the parsed command line."""
     args: argparse.Namespace = parse_args()
     paths.validate_all()
+    setup_logging()
 
     if args.master:
         logger.info("Executing Master Resume generation. Bypassing STDIN requisition.")
