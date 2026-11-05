@@ -5,7 +5,8 @@ from pathlib import Path
 from typing import Any
 
 import pypandoc
-from jinja2 import Environment, FileSystemLoader, select_autoescape
+
+from resume_optimizer import resources
 
 
 def tune_formatting() -> None:
@@ -30,9 +31,7 @@ def tune_formatting() -> None:
         gemini_output: dict[str, Any] = json.load(f)
 
     # 3. Render Templates
-    env: Environment = Environment(
-        loader=FileSystemLoader("."), autoescape=select_autoescape(["html", "xml"])
-    )
+    env = resources.template_environment()
     resume_template = env.get_template("resume_template.md")
 
     resume_markdown: str = resume_template.render(

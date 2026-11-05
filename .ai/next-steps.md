@@ -3,25 +3,21 @@
 **Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `implementing`.
 
 **Just done:**
-- Drafted the spec for task #35 (B2) with `/way-of-working:spec-task` against `main` at
-  `33fe701`, and posted it on #35 as the maintainer:
-  https://github.com/Seuss27/resume-optimizer/issues/35#issuecomment-6645598985. Its spec-mode
-  critic gate (architect, security-critic, docs-consistency) ran 3 rounds and converged; the
-  round 3 tightenings were left for the builder (a `genai.Client` stand-in in the new
-  ATS-and-desirability test, a parent-repo-safe not-a-repo guard test, `str(v)` in the
-  no-path log test, catching only the refusal type around `_main`).
-- Filed #85, extending the tracked-path guard to the existing personal-data patterns, as the
-  spec's critic pass required before the B2 PR merges. It has no milestone yet.
-- The plan anchor now carries the spec comment.
+- Built task #35 (B2, paths and packaging) from its spec comment on branch
+  `feat/35-paths-and-packaging`: `paths.py` (the §3.1 resolvers and the in-repo refusal, exit
+  status 3), `resources.py` (prompts and templates as package data), root-anchored ignores, the
+  tracked-path guard and the wheel smoke as steps of the required CI job. The local green gate
+  passes, and a wheel built here ran the mock pipeline from another directory.
+- The guard covers only the new patterns. Extending it to the older personal ones is #85, filed
+  (milestone 2) as the spec's critic pass required. It depends on #35, so it lands after this PR.
 
-**Next:** task #35 — build B2 (paths and packaging) from the spec comment
-https://github.com/Seuss27/resume-optimizer/issues/35#issuecomment-6645598985, citing follow-up
-#85 in the PR body and the cursor sync; then run `/way-of-working:critic-gate` and
-`/way-of-working:ship`. Model: **sonnet** (coder), in a fresh session.
+**Next:** run `/way-of-working:critic-gate` on the B2 diff, then `/way-of-working:ship`; the
+maintainer merges the B2 PR once CI is green. The next S02 task comes from the milestone after
+that. Model: **sonnet** (coder).
 
 **HITL Gate: NONE OPEN** — next gate: the maintainer merges the B2 PR
 
-**Open for the owner (non-blocking):** place #85 in a milestone. The Sheet CSV export in #34
+**Open for the owner (non-blocking):** the Sheet CSV export in #34
 (on S03), which blocks C3. The `depends_on` markers on #52, #53, #54 (S06) and #55 (S07) name
 issues in other milestones, so `plan-depends.sh` reads each as waiting on every earlier item;
 worth its own backlog issue.

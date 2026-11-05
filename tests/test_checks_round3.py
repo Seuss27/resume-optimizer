@@ -12,6 +12,8 @@ from resume_optimizer.checks import check_unsupported
 from resume_optimizer.generate import print_page_counts
 from resume_optimizer.render import DocumentRefusedError
 
+pytestmark = pytest.mark.usefixtures("stand_in_resources")
+
 
 def test_overlapping_terms_are_counted_once_and_in_a_stable_order() -> None:
     """ "PCI DSS" and "GitLab CI" are one hit each, whatever the set order."""
@@ -268,7 +270,11 @@ def test_generate_collateral_raises_when_a_document_is_refused(
 
     monkeypatch.setattr(generate, "page_count", refuse)
     monkeypatch.setattr(generate.pypandoc, "get_pandoc_version", lambda: "3.0")
-    monkeypatch.setattr(generate.pypandoc, "convert_file", lambda *a, **k: None)
+    monkeypatch.setattr(
+        generate.pypandoc,
+        "convert_file",
+        lambda input_file, fmt, outputfile, **kw: Path(outputfile).write_bytes(b"x"),
+    )
     adapter = MockLLMAdapter(
         mock_responses=[
             {
@@ -283,12 +289,10 @@ def test_generate_collateral_raises_when_a_document_is_refused(
         ]
     )
     monkeypatch.setattr(generate, "get_llm_engine", lambda *a, **k: adapter)
-    Path("master_data.json").write_text(json.dumps({"contact": {"name": "Test Person"}}))
+    Path("ledger/master_data.json").write_text(json.dumps({"contact": {"name": "Test Person"}}))
     Path("system_prompt.txt").write_text("p")
     Path("resume_template.md").write_text("R")
     Path("cover_letter_template.md").write_text("C")
-    Path("Acme_Role_Resume_TP.docx").write_bytes(b"x")
-    Path("Acme_Role_CoverLetter_TP.docx").write_bytes(b"x")
     with pytest.raises(generate.RefusedDocumentError):
         generate.generate_collateral("req text")
 

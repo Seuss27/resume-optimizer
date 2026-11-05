@@ -13,7 +13,16 @@ temp_*.md
 .~lock.*#
 *.log
 *.txt
-!/master_prompt.txt
+!/src/resume_optimizer/prompts/*.txt
+
+# Paths the CI guard checks: later-phase directories, temp Markdown and spreadsheets
+/runs/
+/imports/
+/corpus/
+/voice/
+/eval/
+/temp_*.md
+*.xlsx
 
 
 
