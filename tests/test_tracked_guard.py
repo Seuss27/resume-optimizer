@@ -53,7 +53,39 @@ def _run(tmp_path: Path, cwd: Path) -> subprocess.CompletedProcess[str]:
 
 @pytest.mark.parametrize(
     "name",
-    ["runs/x", "RUNS/x", "temp_a.md", "a.xlsx", "a.XLSX", "tests/fixtures_x/a.xlsx", "eval"],
+    [
+        "runs/x",
+        "RUNS/x",
+        "temp_a.md",
+        "a.xlsx",
+        "a.XLSX",
+        "tests/fixtures_x/a.xlsx",
+        "eval",
+        ".env",
+        "config/.ENV",
+        ".env/x",
+        "tests/fixtures/.env",
+        "master_data.json",
+        "ledger/Master_Data.json",
+        "a.csv",
+        "A.CSV",
+        "example_new.csv",
+        "Example_profile.csv",
+        "docs/example_profile.csv",
+        "tests/fixtures_x/a.csv",
+        "runs/a.csv",
+        "a.docx",
+        "b.PDF",
+        "logs/a.log",
+        "acme_ats_xy.txt",
+        "out/acme_desirability_xy.txt",
+        "_ats_.txt",
+        "tests/fixtures/a.docx",
+        "tests/fixtures/a.pdf",
+        "tests/fixtures/a.log",
+        "tests/fixtures/master_data.json",
+        "tests/fixtures/a_ats_b.txt",
+    ],
 )
 def test_the_guard_fails_on_a_forbidden_tracked_file(tmp_path: Path, name: str) -> None:
     result = _run(tmp_path, _repo(tmp_path, [name]))
@@ -61,7 +93,37 @@ def test_the_guard_fails_on_a_forbidden_tracked_file(tmp_path: Path, name: str) 
     assert name not in result.stdout  # rule 4: no file names in the message
 
 
-@pytest.mark.parametrize("name", ["README.md", "tests/fixtures/a.xlsx", "docs/runs/x"])
+@pytest.mark.parametrize(
+    ("name", "pattern"),
+    [
+        ("runs/.env", "first component is a guarded directory"),
+        ("runs/a.csv", "first component is a guarded directory"),
+        ("tests/fixtures_x/a.csv", "*.csv outside the synthetic examples and fixtures"),
+        (".env", "dotenv file or directory"),
+        ("a_ats_b.txt", "generator ATS report"),
+    ],
+)
+def test_the_guard_names_the_pattern_that_fired(tmp_path: Path, name: str, pattern: str) -> None:
+    result = _run(tmp_path, _repo(tmp_path, [name]))
+    assert result.returncode == 1
+    assert f"1 file(s): {pattern}" in result.stdout
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "README.md",
+        "tests/fixtures/a.xlsx",
+        "docs/runs/x",
+        "example_profile.csv",
+        "example_certifications.csv",
+        "tests/fixtures/a.csv",
+        "src/resume_optimizer/prompts/ats_prompt.txt",
+        "src/resume_optimizer/prompts/desirability_prompt.txt",
+        ".env.example",
+        "notes.txt",
+    ],
+)
 def test_the_guard_passes_on_allowed_files(tmp_path: Path, name: str) -> None:
     assert _run(tmp_path, _repo(tmp_path, [name])).returncode == 0
 

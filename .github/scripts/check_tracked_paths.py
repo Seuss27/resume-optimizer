@@ -1,18 +1,30 @@
 """Fails when a tracked file matches a path pattern that must never be committed.
 
-Run in CI. The patterns are the B2 ignores in .gitignore (plan task B2). The guard compares
-case-insensitively, and its tests/fixtures/ exemption covers only the .xlsx rule. The failure
-message gives counts and the pattern hit, never a file name, because a name can identify a
-person (CLAUDE.md rule 4).
+Run in CI. The patterns are the B2 ignores in .gitignore (plan task B2) and the older
+personal-data patterns .gitignore already covers (.env, ledger master data, CSV, Word, PDF, log
+and generator-report files), which `git add -f` bypasses. Some older ignores are not guarded.
+The patterns are case-folded, and both exemptions are case-sensitive. The tests/fixtures/
+exemption covers only the .xlsx and .csv rules, and the four synthetic root CSV files are exempt
+from the .csv rule only. The failure message gives counts and the pattern hit, never a file
+name, because a name can identify a person (CLAUDE.md rule 4).
 """
 
+import fnmatch
 import os
 import subprocess  # noqa: S404  # a fixed argument list, no shell
 import sys
 from collections import Counter
 
 GUARDED_DIRS: frozenset[str] = frozenset({"runs", "imports", "corpus", "voice", "eval"})
-EXEMPT_PREFIX: str = "tests/fixtures/"  # exempts the .xlsx rule only, and is case-sensitive
+EXEMPT_PREFIX: str = "tests/fixtures/"  # exempts the .xlsx and .csv rules only; case-sensitive
+SYNTHETIC_CSVS: frozenset[str] = frozenset(  # exempts the .csv rule only; exact and case-sensitive
+    {
+        "example_certifications.csv",
+        "example_education.csv",
+        "example_experience.csv",
+        "example_profile.csv",
+    }
+)
 GIT_TIMEOUT_SECONDS: int = 60
 
 
@@ -62,6 +74,23 @@ def pattern_hit(path: str) -> str | None:
         return "root-level temp_*.md"
     if folded.endswith(".xlsx") and not path.startswith(EXEMPT_PREFIX):
         return "*.xlsx outside tests/fixtures/"
+    last: str = parts[-1]
+    if ".env" in parts:
+        return "dotenv file or directory"
+    if "master_data.json" in parts:
+        return "ledger master data file"
+    if last.endswith(".csv") and path not in SYNTHETIC_CSVS and not path.startswith(EXEMPT_PREFIX):
+        return "*.csv outside the synthetic examples and fixtures"
+    if last.endswith(".docx"):
+        return "*.docx"
+    if last.endswith(".pdf"):
+        return "*.pdf"
+    if last.endswith(".log"):
+        return "*.log"
+    if fnmatch.fnmatchcase(last, "*_ats_*.txt"):
+        return "generator ATS report"
+    if fnmatch.fnmatchcase(last, "*_desirability_*.txt"):
+        return "generator desirability report"
     return None
 
 
