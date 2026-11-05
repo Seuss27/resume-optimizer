@@ -1,20 +1,21 @@
 # Next steps
 
 **Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `implementing`. Task #38 (plan task
-B5, credentials) has a spec comment and is anchored.
+B5, credentials) is built and open as PR #125, awaiting the maintainer's merge.
 
 **Just done:**
 - The #39 B6 spike result merged (#123, `2f68583`).
-- Drafted the #38 spec and posted it on the issue (comment 6665138622). Its critic pass
-  (`architect`, `security-critic`, `docs-consistency`) ran 3 rounds and converged.
+- Built #38 from its approved spec comment (6665138622) and opened PR #125. The critic pass
+  (`architect`, `security-critic`, `docs-consistency`) ran 2 rounds and converged. One departure
+  from the spec, chosen by the maintainer: `get_credential` rejects a stored key with surrounding
+  whitespace, a control character or a non-ASCII character, instead of returning it as stored,
+  because the HTTP library quotes such a value in an error. The PR body says so.
 
-**Next:** task #38 — build B5 from the spec comment
-https://github.com/Seuss27/resume-optimizer/issues/38#issuecomment-6665138622, in a fresh
-session. Assigned model: **sonnet** (coder). The spec's grep condition means no text outside
-`docs/` may name the old `.env` loader package, this ledger included.
+**Next:** merge PR #125 (the maintainer's call; this repo has no review CI gate and auto-merge is
+off). Then the next S02 task from milestone 2, in the plan's order, gets its spec drafted.
+Assigned model: **opus** (architect) for the spec.
 
-**HITL Gate: OPEN** — first anchor for milestone 2: the maintainer confirms S02 works from
-milestone 2 and approves the #38 spec comment
+**HITL Gate: OPEN** — the maintainer merges PR #125
 
 **Open for the owner (non-blocking):**
 - After `RO-D17`, the plan header's "`RO-D1`..`RO-D16`" range and §3.8's subscription sentence are
