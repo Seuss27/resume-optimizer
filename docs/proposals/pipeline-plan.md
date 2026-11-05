@@ -364,26 +364,26 @@ then escalated.
 
 There are two runtimes:
 
-- **`claude-code` (default, target behaviour — B6 verifies).**
+- **`claude-code` (default; B6 verified it, see [the record](../spikes/b6-claude-code-runtime.md)).**
   - Invocation: `claude -p` from an empty temporary directory, with these flags:
     - `--tools ""`
     - `--strict-mcp-config` and no MCP config
     - `--json-schema` and `--output-format json`
     - `--no-session-persistence`
     - `--disable-slash-commands`
-    - a non-bypass permission mode
-    - hooks disabled through `--settings`/`--setting-sources`
+    - `--permission-mode dontAsk`
+    - `--settings` with `disableAllHooks: true` and `autoMemoryEnabled: false`
   - The payload goes in on stdin.
-  - `ro` refuses a `claude --version` outside the range B6 recorded.
+  - `ro` refuses a `claude --version` outside [the range B6 recorded](../spikes/b6-claude-code-runtime.md#10-auth-and-version).
   - **Known tension:** `--bare`, the documented way to skip user-level hooks, plugins,
     auto-memory and `CLAUDE.md`, accepts only API-key auth. On the subscription, user-level
-    context may load. B6 measures what does.
+    context may load. [The record](../spikes/b6-claude-code-runtime.md) shows what does.
     - **Auto-memory**, which past agent sessions write, must be shown disabled by setting.
-      Otherwise every role leaves the subscription path.
+      Otherwise every role leaves the subscription path. It is shown for the store B6 tested, at the recorded version.
     - **Analyst, drafter, line-editor and miner** may accept the maintainer's own
       `CLAUDE.md` as contamination.
-    - **Reviewer `support` mode** must see nothing but its payload. If any `CLAUDE.md`
-      reaches the model, that mode runs `--bare` with an API key, or through an adapter.
+    - **Reviewer `support` mode** must see nothing but its payload. `CLAUDE.md` files do
+      reach the model, so that mode runs `--bare` with an API key (`RO-D17`).
     - Any change to the default is recorded as an `RO-D` entry.
 - **Adapters.** `LLMEngineInterface` on Anthropic, Gemini or Bedrock. Perplexity is added in E3,
   for eval only. Adapters are used for CI with `MockLLMAdapter`, for eval, and to route any one
@@ -405,8 +405,8 @@ temperature where the runtime supports it.
     ConPTY window isn't visible either. That clause only re-confirms what the handle check
     already rules out. On Windows, `ro` then reads from `CONIN$`; elsewhere, from `/dev/tty`.
   - These are refused: a pipe, the null device, CI, `claude -p`, and Claude Code's Bash and
-    PowerShell tool shells. Their standard handles are piped, NUL or redirected to a file, in
-    front of a hidden console (measured 2026-11-04).
+    PowerShell tool shells. In those shells `GetConsoleMode` fails on both handles and
+    `GetConsoleWindow()` is NULL (measured 2026-11-05, [the record](../spikes/b6-claude-code-runtime.md#3-console-gate)).
   - End of input is a rejection, and no prompt has a default.
   - A refusal comes with a message naming the fix ("run from Windows Terminal or PowerShell").
   - **It doesn't stop a process running as the maintainer that reaches a console** by

@@ -85,7 +85,7 @@ to the merge.
 
 ## RO-D9 — Code drives a run; LLM roles run without tools
 
-*Decided 2026-11-04 (maintainer).* `ro tailor` is a Python state machine. It runs every stage,
+*Decided 2026-11-04 (maintainer). Partly superseded by RO-D17 for reviewer `support` mode.* `ro tailor` is a Python state machine. It runs every stage,
 holds every human prompt, writes every artifact, and owns the only path that writes to the
 ledger. Each LLM role is a single call that takes a prepared payload in and returns JSON out,
 with **no tools**: no shell, no file access, no network. Roles still make the judgments, and
@@ -186,3 +186,21 @@ entries. Undated "earlier career" lines would shorten long tenures and hide earl
 add value. A wide window keeps foundational experience, while the taper keeps the resume
 within two pages.
 Hiding the timeline costs more than any age-bias benefit it might buy.
+
+## RO-D17 — Reviewer `support` mode runs `--bare` with an API key
+
+*Decided 2026-11-05 (maintainer).*
+Reviewer `support` mode runs `claude -p --bare` with an API key, plus the same tool-less flags as
+every other role (`--tools ""`, `--strict-mcp-config`, `--no-session-persistence`,
+`--disable-slash-commands`, `--permission-mode dontAsk`). Every other role and mode keeps
+RO-D9's default, headless Claude Code on the subscription. **Why:** on the subscription, `claude -p` loads `CLAUDE.md` files under the
+§3.6 flags (user-level and parent-directory files both reached the model), and `--bare` is the
+documented way to skip them. It accepts only an API key. The other roles may accept the
+maintainer's `CLAUDE.md` as contamination (plan §3.6). `support` mode judges whether evidence
+backs a claim, so it must see nothing but its payload. Nothing else moved: the spike showed
+`claude -p` tool-less, with no transcript written and no hook firing under the flags. `--bare` itself was not run in B6:
+D1 re-runs items 1, 4, 7 and 9 under it before relying on it. Tool-less
+means zero tools, MCP servers, skills and slash commands in the init event, and only Claude Code's
+built-in plugins, agents and output style; the plan's wording of zero in every category cannot be
+met, because the built-ins are always listed. The maintainer accepted that reading, and D1's check
+will assert it.

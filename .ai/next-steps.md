@@ -4,23 +4,23 @@
 B6, the `claude -p` runtime spike) has a spec comment and is anchored.
 
 **Just done:**
-- The maintainer picked #39 as the next S02 task. Its result blocks D1.
-- Drafted #39's spec with `/way-of-working:spec-task 39`, against `83526a5`, and posted it as
-  Seuss27 (comment 6662436797; legacy `identities: null`, so the script held it).
-  - Its critic pass (`architect`, `docs-consistency`) converged in 4 rounds. The last round's
-    tightenings were applied before posting.
-- Merged the cursor sync #121.
+- The maintainer ran the live B6 measurements. Item 4 failed on `CLAUDE.md` only, so reviewer
+  `support` mode moves to `--bare` with an API key (`RO-D17`). Every other role stays on the
+  subscription. Item 1 passed on the reading that built-in plugins, agents and the default style
+  are allowed.
+- Wrote `docs/spikes/b6-claude-code-runtime.md`, `RO-D17` and the plan §3.6 and §3.7 edits.
+  - Its critic pass (`architect`, `security-critic`, `docs-consistency`) converged in 3 rounds.
 
-**Next:** task #39 — build the B6 spike from the spec comment
-https://github.com/Seuss27/resume-optimizer/issues/39#issuecomment-6662436797. The session
-prepares the probe, payloads and commands outside the checkout. The maintainer then runs the live
-measurements by hand from Windows Terminal, with no Claude Code session open, and the session writes
-`docs/spikes/b6-claude-code-runtime.md` and the doc edits from the reported results. Assigned
-model: **sonnet** (coder).
+**Next:** merge the #39 PR (the maintainer's call), then pick the next S02 task. Assigned model:
+**sonnet** (coder).
 
-**HITL Gate: NONE OPEN** — next gate: the maintainer runs the live B6 measurements by hand
+**HITL Gate: NONE OPEN** — next gate: the maintainer merges the #39 PR
 
 **Open for the owner (non-blocking):**
+- After `RO-D17`, the plan header's "`RO-D1`..`RO-D16`" range and §3.8's subscription sentence are
+  stale for `support` mode (the spec kept them unchanged). D1's spec should pick up three things:
+  re-run B6 items 1, 4, 7 and 9 under `--bare`, pass the API key only to the `support` child, and
+  create run directories under a parent only the user can write to.
 - Still open from #100: a manual run of the `ruleset-drift` workflow, and its last two done-whens (a
   green run, and that a PR with a red `secrets / scan` cannot be merged).
 - The Sheet CSV export in #34 (on S03), which blocks C3.
