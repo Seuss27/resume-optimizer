@@ -1,28 +1,22 @@
 # Next steps
 
-**Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `implementing`. Task #85 (extend the
-tracked-path guard) is anchored, and its spec is posted and approved.
+**Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `planning`. Task #85 is merged, and no
+next task is anchored.
 
 **Just done:**
-- Posted the #85 spec, and the maintainer reacted to it:
-  https://github.com/Seuss27/resume-optimizer/issues/85#issuecomment-6660211167, pinned to `e82d717`.
-  - Its critic gate (`architect`, `security-critic`) converged in 3 rounds.
-  - Its scope choices are in the comment itself.
-- Merged the ruff pin fixes:
-  - #109 (`8b33af3`) pins the pre-commit ruff hook to `v0.17.3`.
-  - #111 (`6cb5e3a`) adds Dependabot's `pre-commit` ecosystem.
-  - The critic passes on both converged: 1 round and 2 rounds.
-- Filed milestone T01 (milestone 11) with seven issues. It covers the move from Hatch to uv
-  (environment, lock, `uv_build`, CI) and the 603-Identity devcontainer. It also covers the rename to
-  resume-orchestrator, whose GitHub-side step runs with the transfer (#68).
-- Filed glunk-works/claude-workbench#1349, which adds this repo to the workbench's identity and
-  dev-container cutover. #115 depends on it.
+- Merged #85 (`5eb50ff`, PR #120): the tracked-path guard now also fails on `.env`,
+  `master_data.json`, `*.csv` (bar the four synthetic root files and `tests/fixtures/`), `*.docx`,
+  `*.pdf`, `*.log` and the generator's report files.
+  - Its critic pass (`architect`, `security-critic`, `docs-consistency`) converged in 2 rounds.
+  - The wording tightenings left unapplied are the "four synthetic root CSV files" count in the
+    guard's docstring, and "the patterns are case-folded" where the path is what is folded.
+- Merged the cursor sync #119.
 
-**Next:** task #85 — build the guard extension exactly as the spec comment above says, on branch
-`feat/85-guard-personal-data`. Run the green gate, `/way-of-working:critic-gate` and
-`/way-of-working:ship`. Do it in a fresh session. Assigned model: **sonnet** (coder).
+**Next:** pick the next S02 task with the maintainer (list the milestone's open issues with
+`gh api "repos/Seuss27/resume-optimizer/issues?milestone=2&state=open"`), then draft its spec with
+`/way-of-working:spec-task <N>`. Assigned model: **opus** (architect).
 
-**HITL Gate: NONE OPEN** — next gate: the maintainer reviews and merges the #85 PR
+**HITL Gate: NONE OPEN** — next gate: the maintainer picks the next S02 task
 
 **Open for the owner (non-blocking):**
 - Still open from #100: a manual run of the `ruleset-drift` workflow, and its last two done-whens (a
