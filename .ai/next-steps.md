@@ -1,22 +1,24 @@
 # Next steps
 
-**Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `implementing`. Task #38 (plan task
-B5, credentials) is built and open as PR #125, awaiting the maintainer's merge.
+**Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `implementing`. Task #40 (plan task
+B7, the release process) has a spec and is ready to build.
 
 **Just done:**
-- The #39 B6 spike result merged (#123, `2f68583`).
-- Built #38 from its approved spec comment (6665138622) and opened PR #125. The critic pass
-  (`architect`, `security-critic`, `docs-consistency`) ran 2 rounds and converged. One departure
-  from the spec, chosen by the maintainer: `get_credential` rejects a stored key with surrounding
-  whitespace, a control character or a non-ASCII character, instead of returning it as stored,
-  because the HTTP library quotes such a value in an error. The PR body says so.
+- #38 (B5, credentials) merged as PR #125 (`751a893`).
+- Posted the #40 spec as comment 6667979459: a dispatched, environment-gated release workflow
+  modelled on claude-workbench's, which the maintainer chose. It replaces the first spec comment
+  (6667321969, a hand-made tag), which is not used. The critic gate (`architect`,
+  `security-critic`, `docs-consistency`) ran 3 rounds and converged.
+  - Tightenings left for the builder: the RO-D18 decided line names the merge date, which is
+    unknown when the file is written; the PR could also carry `Decision: RO-D18`; confirm that
+    `pipx inject … --include-apps` really puts `keyring` on the path.
 
-**Next:** merge PR #125 (the maintainer's call; this repo has no review CI gate and auto-merge is
-off). Then #40 (B7, a release process) is the next task to get a spec; #68 (F6, the transfer) stays with
-the maintainer.
-Assigned model: **opus** (architect) for the spec.
+**Next:** task #40 — build B7 (the dispatched release workflow and one version source) from spec
+comment https://github.com/Seuss27/resume-optimizer/issues/40#issuecomment-6667979459, run the
+green gate and the critic gate, then ship the PR. #68 (F6, the transfer) stays with the maintainer.
+Assigned model: **sonnet** (coder).
 
-**HITL Gate: OPEN** — the maintainer merges PR #125
+**HITL Gate: NONE OPEN** — next gate: the maintainer merges the #40 PR, then does the release prerequisites the spec lists
 
 **Open for the owner (non-blocking):**
 - After `RO-D17`, the plan header's "`RO-D1`..`RO-D16`" range and §3.8's subscription sentence are
