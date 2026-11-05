@@ -8,10 +8,11 @@ the `ruleset` block and every entry under `rulesets`, each declared rule type mu
 applying rules and each declared required check among the `required_status_checks` contexts.
 Extra checks on GitHub are not drift. A block may also declare `check_integrations`, a mapping
 from a declared check to the id of the app it must be pinned to (for example 15368, GitHub
-Actions). GitHub must then require that check with that `integration_id`, so a commit status of
-the same name cannot satisfy it. None is declared until `secrets / scan` is required. The script
-fails closed on unreadable or wrongly shaped input, an empty `rulesets` list, and an empty
-declared `required_checks` or `rule_types`. Bypass actors are not in the branch-rules response,
+Actions). GitHub must then require that check with that `integration_id`, so a status from
+another app or a personal token cannot satisfy it. A job in this repo that can write statuses
+still posts as that app, so the pin does not stop one. A `check_integrations` that is null or not
+a mapping fails closed. So does unreadable or wrongly shaped input, an empty `rulesets` list, and
+an empty declared `required_checks` or `rule_types`. Bypass actors are not in the branch-rules response,
 so they are not checked. The `pull_request` rule's parameters (approval count, merge methods) are
 in it, but this check leaves them alone.
 """

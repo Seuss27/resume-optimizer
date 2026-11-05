@@ -120,7 +120,16 @@ def test_an_undeclared_pin_is_not_checked() -> None:
 
 
 @pytest.mark.parametrize(
-    "pins", [["lint"], {"nope": 15368}, {"lint": "15368"}, {"lint": True}, {"lint": 0}]
+    "pins",
+    [
+        ["lint"],
+        None,
+        {"nope": 15368},
+        {"lint": "15368"},
+        {"lint": True},
+        {"lint": 0},
+        {"lint": None},
+    ],
 )
 def test_a_bad_check_integrations_fails_closed(pins: Any) -> None:
     project = copy.deepcopy(PROJECT)
@@ -129,11 +138,31 @@ def test_a_bad_check_integrations_fails_closed(pins: Any) -> None:
         check_ruleset.check(_pinned_rules(15368), project)
 
 
-def test_a_non_numeric_integration_id_on_github_fails_closed() -> None:
+@pytest.mark.parametrize("bad", ["15368", True, 15368.0])
+def test_a_non_numeric_integration_id_on_github_fails_closed(bad: Any) -> None:
     rules = _pinned_rules(15368)
-    rules[-1]["parameters"]["required_status_checks"][0]["integration_id"] = "15368"
+    rules[-1]["parameters"]["required_status_checks"][0]["integration_id"] = bad
     with pytest.raises(check_ruleset.ShapeError):
         check_ruleset.check(rules, PROJECT)
+
+
+def test_a_check_required_twice_is_met_by_either_copy_in_either_order() -> None:
+    for first, second in ((None, 15368), (15368, None)):
+        rules = _pinned_rules(first) + _pinned_rules(second)
+        assert check_ruleset.check(rules, _pinned_project(15368)) == []
+
+
+def test_a_pin_on_a_check_missing_from_github_is_still_reported_missing() -> None:
+    rules = _rules(["test"])
+    problems = check_ruleset.check(rules, _pinned_project(15368))
+    assert any("missing required check lint" in p for p in problems)
+    assert not any("not pinned" in p for p in problems)
+
+
+def test_an_integration_id_that_is_absent_counts_as_unpinned() -> None:
+    rules = _rules(CHECKS)  # no integration_id key at all, as GitHub returns for an unpinned check
+    problems = check_ruleset.check(rules, _pinned_project(15368))
+    assert any("not pinned to app 15368" in p for p in problems)
 
 
 def _drop(project: dict[str, Any], *path: str | int) -> dict[str, Any]:
