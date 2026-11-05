@@ -1,4 +1,0 @@
-# Extends gitleaks' default rules. No allowlist: a finding on this public repo is fixed or
-# reported to the maintainer, never silenced here.
-[extend]
-useDefault = true

@@ -71,7 +71,7 @@ yet gets its path from the plan task that creates it.
 - `adapters`: LLM runtimes and provider adapters (`adapters.py`, `interfaces.py`)
 - `roles`: role prompts and schemas in `src/resume_optimizer/roles/`
 - `cli`: the `ro` and `generate-resume` entry points (`generate.py` currently spans `cli` and `render`)
-- `ci`: `.github/`, `.pre-commit-config.yaml`, `.gitleaks.toml`
+- `ci`: `.github/`, `.pre-commit-config.yaml`
 
 Any other path takes the area of the change it belongs to. A change that spans areas takes the
 area of its main purpose, or omits the scope. The `deps` scope, and Dependabot's `deps-dev`, are exempt.

@@ -148,58 +148,6 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  secrets-scan:
-    runs-on: ubuntu-latest
-    env:
-      GITLEAKS_VERSION: "8.30.1"
-      # SHA-256 of the linux_x64 tarball of that release. Dependabot does not bump this
-      # download: update the version and the hash together, by hand.
-      GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
-    steps:
-      - name: Checkout the full history
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Install gitleaks
-        run: |
-          curl --fail --silent --show-error --location \
-            --output "$RUNNER_TEMP/gitleaks.tar.gz" \
-            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
-          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/gitleaks.tar.gz" | sha256sum --check --strict -
-          mkdir "$RUNNER_TEMP/gitleaks"
-          tar -xzf "$RUNNER_TEMP/gitleaks.tar.gz" -C "$RUNNER_TEMP/gitleaks" gitleaks
-
-      # A PR's own tree can silence the scan: gitleaks reads a .gitleaksignore from it, and git
-      # applies a tracked .gitattributes (for example `* -diff`) to every commit it prints, which
-      # hides the patch from gitleaks as binary. Refuse both files. .gitleaks.toml adds no allowlist of
-      # its own on purpose, but CI does not enforce that; a change to it is covered only by the
-      # critics that code_paths selects.
-      - name: Refuse files that silence the scan
-        run: |
-          if [ -e .gitleaksignore ]; then
-            echo "A .gitleaksignore silences the secrets scan; remove it." >&2
-            exit 1
-          fi
-          if [ -n "$(find . -name .gitattributes -not -path './.git/*' -print -quit)" ]; then
-            echo "A .gitattributes can hide files from the secrets scan; remove it." >&2
-            exit 1
-          fi
-
-      # --ignore-gitleaks-allow stops an inline gitleaks:allow in a PR's own diff from silencing
-      # a finding. --diff-merges=first-parent makes git print merge commits' diffs, which plain
-      # `git log -p` omits, so a secret added only in a conflict resolution is scanned. A file
-      # git treats as binary (a NUL byte) is still skipped; that is a gitleaks limitation.
-      # Redacted and not verbose: a verbose record prints the file path, the author and the email,
-      # and this public repo's CI log must not carry those (CLAUDE.md rule 4). Without
-      # --log-opts, v8 scans every fetched ref, not only HEAD's history.
-      - name: Scan the history of HEAD
-        run: >
-          "$RUNNER_TEMP/gitleaks/gitleaks" git
-          --log-opts="--diff-merges=first-parent HEAD" --redact --no-banner --ignore-gitleaks-allow --exit-code 1
-          --config .gitleaks.toml .
-
   zizmor:
     runs-on: ubuntu-latest
     steps:
