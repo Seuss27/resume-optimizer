@@ -11,7 +11,7 @@
   ATS-and-desirability test, a parent-repo-safe not-a-repo guard test, `str(v)` in the
   no-path log test, catching only the refusal type around `_main`).
 - Filed #85, extending the tracked-path guard to the existing personal-data patterns, as the
-  spec's critic pass required before the B2 PR merges. It has no milestone yet.
+  spec's critic pass required before the B2 PR merges, and placed it in S02.
 - The plan anchor now carries the spec comment.
 
 **Next:** task #35 — build B2 (paths and packaging) from the spec comment
@@ -21,7 +21,7 @@ https://github.com/Seuss27/resume-optimizer/issues/35#issuecomment-6645598985, c
 
 **HITL Gate: NONE OPEN** — next gate: the maintainer merges the B2 PR
 
-**Open for the owner (non-blocking):** place #85 in a milestone. The Sheet CSV export in #34
+**Open for the owner (non-blocking):** #85's place in S02's build order (after #35). The Sheet CSV export in #34
 (on S03), which blocks C3. The `depends_on` markers on #52, #53, #54 (S06) and #55 (S07) name
 issues in other milestones, so `plan-depends.sh` reads each as waiting on every earlier item;
 worth its own backlog issue.
