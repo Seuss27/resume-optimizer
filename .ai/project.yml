@@ -81,7 +81,10 @@ review:
 # ── agents ───────────────────────────────────────────────────────────────────
 agents:
   enabled: [architect, coder, security-critic, docs-consistency]
-  diff_rule: null   # critic-gate proposes; the maintainer picks.
+  # Rule-selected, no pick-list: architect and security-critic for code_paths and for the extra
+  # prefixes below (tracked paths that can carry rule-4 content, and the agent instructions),
+  # docs-consistency for .md files and load_bearing_docs. Interim until the review CI gate (#88).
+  diff_rule: [docs/, .ai/, CLAUDE.md, readme.md, example_, dummy_gemini_output.json]
 models:
   architect: opus
   coder: sonnet
