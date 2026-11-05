@@ -32,11 +32,10 @@ tracked-path guard) is anchored, and its spec is posted and approved.
   `plan-depends.sh` reads each as waiting on every earlier item. Worth its own backlog issue.
 - Decide whether to delete or salvage the local branch `docs/sync-cursor-s02-b2-spec`. Its tip has
   commits that no merged PR carries.
-- Ruff and pre-commit now disagree on the ruff version:
-  - Dependabot PR #101 merged ruff `0.17.3` into `pyproject.toml`.
-  - `.pre-commit-config.yaml` still pins `v0.15.20`, because its ecosystem is not in
-    `.github/dependabot.yml`.
-  - `pre-commit run --all-files` is still unconfirmed with either version.
+- PR #109 (#108) pins the pre-commit ruff hook to `v0.17.3`, matching `pyproject.toml`.
+  `pre-commit run --all-files` passes under it locally. Dependabot does not watch `.pre-commit-config.yaml`,
+  so the two pins can drift again on the next ruff bump. A `pre-commit` Dependabot ecosystem or a
+  check that compares the pins is a possible follow-up.
 - A decision entry in `docs/decisions.md` for the Betterleaks switch is optional.
 - The org's consumer-workflow lint (`check-consumer-workflows.sh`) reports the review gate and the
   devcontainer-image caller missing. The review gate is #88.
