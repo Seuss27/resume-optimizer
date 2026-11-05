@@ -1,26 +1,30 @@
 # Next steps
 
-**Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `implementing`. Task #40 (plan task
-B7, the release process) has a spec and is ready to build.
+**Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `implementing`. #40 (plan task B7,
+the release process) is done and closed. #73 (the Word and docx2pdf risk on the render path) is
+next, and it has no spec yet.
 
 **Just done:**
-- #38 (B5, credentials) merged as PR #125 (`751a893`).
-- Posted the #40 spec as comment 6667979459: a dispatched, environment-gated release workflow
-  modelled on claude-workbench's, which the maintainer chose. It replaces the first spec comment
-  (6667321969, a hand-made tag), which is not used. The critic gate (`architect`,
-  `security-critic`, `docs-consistency`) ran 3 rounds and converged.
-  - Tightenings left for the builder: the RO-D18 decided line names the merge date, which is
-    unknown when the file is written; the PR could also carry `Decision: RO-D18`; confirm that
-    `pipx inject … --include-apps` really puts `keyring` on the path.
+- #40 shipped as PR #127 (`b07ab37`): the dispatched release workflow, one version source,
+  `CHANGELOG.md` and `RO-D18`. The critic gate (`architect`, `security-critic`,
+  `docs-consistency`) ran 3 rounds and converged.
+  - Round 3 left tightenings only: the window between the tag-absent check and the publish is
+    closed by the ruleset and the concurrency group; a PATCH that times out but applies leaves it
+    unclear whether readme step 4 or 5 applies.
+- The maintainer set up the release App, the `release` environment and both tag rulesets, then
+  released `v0.1.0` and ran every post-merge done-when check, all as the spec expects.
+  `gh release list` and `git ls-remote --tags origin` show the result.
 
-**Next:** task #40 — build B7 (the dispatched release workflow and one version source) from spec
-comment https://github.com/Seuss27/resume-optimizer/issues/40#issuecomment-6667979459, run the
-green gate and the critic gate, then ship the PR. #68 (F6, the transfer) stays with the maintainer.
-Assigned model: **sonnet** (coder).
+**Next:** draft the spec for #73 with `/way-of-working:spec-task 73`, then hold it for the
+maintainer to post and react to. A Sonnet (coder) session builds it after that. #68 (F6, the
+transfer) stays with the maintainer. Assigned model: **opus** (architect).
 
-**HITL Gate: NONE OPEN** — next gate: the maintainer merges the #40 PR, then does the release prerequisites the spec lists
+**HITL Gate: NONE OPEN** — next gate: the maintainer posts and approves the #73 spec comment
 
 **Open for the owner (non-blocking):**
+- F6 (#68) checklist for the release setup: transfer or recreate the release App, reinstall it on
+  the moved repo, re-add `RELEASE_APP_CLIENT_ID` and `RELEASE_APP_PRIVATE_KEY` to the `release`
+  environment, and check that the `release-tag-creation` bypass actor still names that App.
 - After `RO-D17`, the plan header's "`RO-D1`..`RO-D16`" range and §3.8's subscription sentence are
   stale for `support` mode (the spec kept them unchanged). D1's spec should pick up three things:
   re-run B6 items 1, 4, 7 and 9 under `--bare`, pass the API key only to the `support` child, and
