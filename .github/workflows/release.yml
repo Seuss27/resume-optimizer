@@ -126,6 +126,7 @@ jobs:
         env:
           PREVIOUS: ${{ steps.plan.outputs.previous }}
         run: |
+          set -o pipefail
           # An @ in a subject would notify that account when GitHub renders the notes.
           git log --format='- %s' "$PREVIOUS..HEAD" | sed 's/@/(at)/g' >> "$RUNNER_TEMP/notes.md"
 
@@ -191,10 +192,20 @@ jobs:
           RELEASE_ID: ${{ steps.draft.outputs.id }}
           TAG: ${{ steps.plan.outputs.tag }}
         run: |
+          # Publishing a draft for a tag that already exists attaches the release to that tag's
+          # commit, so require that the tag is absent while the release is still a draft. Only a
+          # 404 passes; any other failure stops here, where the draft can still be deleted.
+          if out=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" 2>&1); then
+            echo "::error::the tag already exists; delete the draft and bump the version"
+            exit 1
+          fi
+          case "$out" in
+            *"HTTP 404"*) ;;
+            *) echo "::error::could not confirm the tag is absent"; exit 1 ;;
+          esac
           gh api --method PATCH "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" \
             -F draft=false > /dev/null
-          # The tag must name the release commit. A tag that appeared after the plan step would
-          # make the publish attach this wheel to a different commit.
+          # After the publish this is an alarm, not a guard: the tag now exists.
           sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" --jq .object.sha)
           if [ "$sha" != "$GITHUB_SHA" ]; then
             echo "::error::the published tag does not name the release commit"

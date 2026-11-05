@@ -144,6 +144,8 @@ The steps only. `RO-D18` in [docs/decisions.md](docs/decisions.md) holds the rul
    dry run left on, approves the `release` environment, and reads the printed plan and notes.
 3. Dispatch again with the dry run off.
 4. If a run fails after creating a draft release, delete the draft before retrying.
+5. If a run fails after publishing, the tag exists and is never reused: fix the defect in the
+   next version.
 
 ## Configuration & Security
 
