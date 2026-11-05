@@ -7,7 +7,7 @@
   by rule.
 - Drafted the spec for task #36 (B3) with `/way-of-working:spec-task 36` and posted it as
   comment 6647737626 on #36. Its critic pass (architect, security-critic, docs-consistency) ran
-  2 rounds and converged.
+  2 rounds and converged. The maintainer approved it with a reaction.
 - What the spec decides beyond the issue text: B3 drops 3.12 and 3.13 from the CI matrix, since
   the new floor forces it, and edits plan B3 and the `.ai/project.yml` comment to match. The
   `--score-job` preferences now follow `LLM_PROVIDER`. The boundary test bans importing
@@ -18,8 +18,7 @@ https://github.com/Seuss27/resume-optimizer/issues/36#issuecomment-6647737626 in
 run the green gate and `/way-of-working:critic-gate`, then `/way-of-working:ship`. Model:
 **sonnet** (coder).
 
-**HITL Gate: OPEN** — the maintainer reviews and reacts to the #36 spec comment before the build
-starts
+**HITL Gate: NONE OPEN** — next gate: the maintainer merges the task 36 build PR
 
 **Open for the owner (non-blocking):** three optional tightenings the critics left on the #36
 spec: name `paths.validate_all` with its module, reword plan B3's Done-when from "constructed" to
