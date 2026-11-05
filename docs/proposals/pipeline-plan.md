@@ -753,9 +753,9 @@ the maintainer approves it. That approval also confirms the RO-D wording.
   - **Workflow hygiene:** every action is pinned by commit SHA with a version comment. A
     workflow has a top-level `permissions` of at most `contents: read` and sets
     `persist-credentials: false` on every checkout; the secrets-scan caller has no checkout of its own.
-  - **Dependabot:** pip runs daily with a `chore` prefix, and GitHub Actions weekly with a `ci`
-    prefix, both with `include: scope`, so every Dependabot PR title passes `pr-title`. The
-    rule that ignored major versions is dropped.
+  - **Dependabot:** `.github/dependabot.yml` names the ecosystems and their schedules. Every
+    entry sets a `chore` or `ci` prefix with `include: scope`, so a Dependabot PR title meets
+    `pr-title`'s type and scope rules. The rule that ignored major versions is dropped.
   - **Dependencies:** pinned to exact versions in `pyproject.toml` and the hatch envs, as the
     glunk-works repos do. The pin set is CVE-clean under `pip-audit`.
   - **Ruleset swap, done in the order `conventions.md` § *Prose economy* requires:** the new
