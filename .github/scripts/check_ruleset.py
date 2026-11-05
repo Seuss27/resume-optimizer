@@ -12,9 +12,9 @@ Actions). GitHub must then require that check with that `integration_id`, so a s
 another app or a personal token cannot satisfy it. A job in this repo that can write statuses
 still posts as that app, so the pin does not stop one. A `check_integrations` that is null or not
 a mapping fails closed. So does unreadable or wrongly shaped input, an empty `rulesets` list, and
-an empty declared `required_checks` or `rule_types`. Bypass actors are not in the branch-rules response,
-so they are not checked. The `pull_request` rule's parameters (approval count, merge methods) are
-in it, but this check leaves them alone.
+an empty declared `required_checks` or `rule_types`. Bypass actors are not in the branch-rules
+response, so they are not checked. The `pull_request` rule's parameters (approval count, merge
+methods) are in it, but this check leaves them alone.
 """
 
 import json
