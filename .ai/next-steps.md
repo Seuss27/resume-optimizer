@@ -15,8 +15,9 @@ and sits in PR #99, awaiting the maintainer's merge.
   converged; the Betterleaks switch, 2 rounds, converged; the `integration_id` change, 1 round,
   converged. No second-opinion round was configured.
 
-**Next:** the maintainer merges the task #63 PR (#99). The next S02 task is the maintainer's pick
-after that; the follow-up below also waits on the merge. Assigned model: **sonnet** (coder).
+**Next:** the maintainer merges the task #63 PR (#99). Issue #100 (require `secrets / scan`) is
+the follow-up and waits on that merge; the next S02 task is the maintainer's pick. Assigned model:
+**sonnet** (coder).
 
 **After the merge (maintainer):** issue #100 requires `secrets / scan` in `main-required-checks`
 with `integration_id: 15368`, once the caller has merged and reported on a later PR. It reads the
