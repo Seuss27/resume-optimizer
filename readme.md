@@ -70,6 +70,81 @@ If you prefer a standard local virtual environment workflow using standard pytho
    pip install -e .[dev]
    ```
 
+### Option C: Install a Released Wheel
+
+Releases are how real applications run (plan §3.1). For the legacy generator, use with real data
+still waits on `RO-D13`. [CHANGELOG.md](CHANGELOG.md) lists the versions. Replace `<tag>` below
+with the release tag you want.
+
+1. **Download the release's assets** (needs `gh`, logged in):
+
+   ```bash
+   gh release download <tag> --repo Seuss27/resume-optimizer --dir resume-optimizer-release
+   cd resume-optimizer-release
+   ```
+
+2. **Verify the wheel's authenticity.** The check is pinned to this repository, to the release
+   workflow and to `main`, because a check against the repository alone would accept an
+   attestation from any workflow on any branch:
+
+   ```bash
+   gh attestation verify ./*.whl --repo Seuss27/resume-optimizer \
+     --signer-workflow Seuss27/resume-optimizer/.github/workflows/release.yml \
+     --source-ref refs/heads/main
+   ```
+
+3. **Check integrity** against `SHA256SUMS`. This guards against corruption only, not tampering:
+
+   ```bash
+   sha256sum --check --ignore-missing SHA256SUMS
+   ```
+
+   ```powershell
+   $wheel = Get-ChildItem *.whl
+   (Get-FileHash $wheel -Algorithm SHA256).Hash.ToLower() -in (Select-String $wheel.Name SHA256SUMS | ForEach-Object { ($_.Line -split '\s+')[0] })
+   ```
+
+   The PowerShell command prints `True` when the wheel matches.
+
+4. **Install the local wheel** so the `keyring` command is exposed from the tool's own
+   environment:
+
+   ```bash
+   uv tool install --with-executables-from keyring ./resume_optimizer-*.whl
+   ```
+
+   or, with pipx:
+
+   ```bash
+   pipx install ./resume_optimizer-*.whl
+   pipx inject --include-apps resume-optimizer keyring
+   ```
+
+   (`--include-deps` would put every dependency's commands on the path, so use `--include-apps`
+   with `keyring` alone.)
+
+The package exposes `generate-resume` and `build-resume-state` today. `ro` arrives with its own
+task. A tool install does not carry everything:
+
+- The generator still reads the pandoc reference document from the working directory, so run it
+  from a directory that holds your own reference document. The CLAUDE.md *Deviations and known
+  gaps* entry on the working directory says why and when that ends.
+- The example CSVs come from the repository, at the same tag.
+- Store your API key with the installed `keyring` command, as in the next section, using the same
+  service and username (`resume-optimizer`, `gemini-api-key`). The missing-key error's own hint
+  names the module form of the command, which does not apply under this option.
+
+## Releasing
+
+The steps only. `RO-D18` in [docs/decisions.md](docs/decisions.md) holds the rules and the why.
+
+1. In one PR, bump the version in `src/resume_optimizer/__init__.py` and move the changelog's
+   unreleased entries into a section for that version.
+2. After the squash merge, the maintainer dispatches the release workflow from `main` with the
+   dry run left on, approves the `release` environment, and reads the printed plan and notes.
+3. Dispatch again with the dry run off.
+4. If a run fails after creating a draft release, delete the draft before retrying.
+
 ## Configuration & Security
 
 ⚠️ **IMPORTANT:** Your career history and API keys are sensitive. This repository is pre-configured with a `.gitignore` to prevent tracking your personal CSVs, JSON state, and credentials.

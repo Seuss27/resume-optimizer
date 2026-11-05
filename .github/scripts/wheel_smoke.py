@@ -5,6 +5,7 @@ was installed into, from a directory outside the checkout. Every check raises Sy
 message. All data is synthetic and the provider, pandoc and the page counter are stood in for.
 """
 
+import importlib.metadata
 import json
 import os
 import sys
@@ -43,9 +44,17 @@ def check_wheel(argv: list[str]) -> Path:
     return wheel
 
 
+def check_versions(wheel: Path, package_version: str) -> None:
+    """The installed metadata and the wheel file name must both carry the package version."""
+    if importlib.metadata.version("resume-optimizer") != package_version:
+        fail("the installed metadata version differs from the package __version__")
+    if wheel.name.split("-")[1] != package_version:
+        fail("the wheel file name's version differs from the package __version__")
+
+
 def main(argv: list[str]) -> None:
     """Runs every check."""
-    check_wheel(argv)
+    wheel: Path = check_wheel(argv)
 
     work: Path = Path(tempfile.mkdtemp(prefix="ro-smoke-"))
     ledger, runs, logs = work / "ledger", work / "runs", work / "logs"
@@ -59,6 +68,7 @@ def main(argv: list[str]) -> None:
 
     if "site-packages" not in Path(resume_optimizer.__file__).resolve().parts:
         fail("resume_optimizer was not imported from the installed wheel")
+    check_versions(wheel, resume_optimizer.__version__)
 
     from resume_optimizer import generate
     from resume_optimizer.adapters import MockLLMAdapter

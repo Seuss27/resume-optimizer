@@ -53,8 +53,6 @@ class RefusedDocumentError(RuntimeError):
     """A generated document contained content the model should not have produced."""
 
 
-__version__ = "0.1.0"
-
 # Model text reaches pandoc as Markdown. Raw attributes would let it pass raw OOXML (field codes,
 # external includes) straight into the .docx, and a YAML block in the text would write hidden
 # document properties (and can ask for a TOC field), so both are switched off.

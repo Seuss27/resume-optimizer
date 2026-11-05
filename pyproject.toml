@@ -72,7 +72,7 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 
 [tool.hatch.version]
-path = "src/resume_optimizer/generate.py"
+path = "src/resume_optimizer/__init__.py"
 
 [tool.hatch.envs.default]
 features = ["dev"]
