@@ -74,12 +74,19 @@ If you prefer a standard local virtual environment workflow using standard pytho
 
 ⚠️ **IMPORTANT:** Your career history and API keys are sensitive. This repository is pre-configured with a `.gitignore` to prevent tracking your personal CSVs, JSON state, and credentials.
 
-1. **Configure your API Key:**
-   Create a file named `.env` in the root directory and add your key:
+1. **Store your API key in the OS keyring:**
 
-   ```text
-   GEMINI_API_KEY="your_actual_api_key_here"
+   ```bash
+   hatch run python -m keyring set resume-optimizer gemini-api-key
    ```
+
+   Under Option B, with the venv active, drop the `hatch run` prefix.
+   Enter the key at the prompt, never on the command line. The tool reads it from the keyring only.
+   A `.env` file from an earlier version is no longer read: move its key into the keyring, then
+   delete the file, and remove any `GEMINI_API_KEY` export from your shell profile too.
+
+   `LLM_PROVIDER` (default `gemini`) is an ordinary environment variable that you set in the
+   shell. It is not read from a file. This repo must never hold credentials.
 
 2. **Hydrate your Data:**
    * This project includes dummy templates to demonstrate the required data schema.

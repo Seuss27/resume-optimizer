@@ -11,9 +11,8 @@ from pathlib import Path
 from typing import Any
 
 import pypandoc
-from dotenv import load_dotenv
 
-from resume_optimizer import paths, resources
+from resume_optimizer import credentials, paths, resources
 from resume_optimizer.adapters import BedrockAdapter, GeminiAdapter, MockLLMAdapter
 from resume_optimizer.checks import UnsupportedReport, check_unsupported
 from resume_optimizer.interfaces import LLMEngineInterface
@@ -56,8 +55,6 @@ class RefusedDocumentError(RuntimeError):
 
 __version__ = "0.1.0"
 
-load_dotenv()
-
 # Model text reaches pandoc as Markdown. Raw attributes would let it pass raw OOXML (field codes,
 # external includes) straight into the .docx, and a YAML block in the text would write hidden
 # document properties (and can ask for a TOC field), so both are switched off.
@@ -69,7 +66,15 @@ PANDOC_SAFETY_ARGS: list[str] = ["--sandbox"]
 
 
 def get_llm_engine(mock_data: list[dict[str, Any]] | None = None) -> LLMEngineInterface:
-    """Factory method to initialize the active LLM adapter via environment config."""
+    """Factory method to initialize the active LLM adapter.
+
+    The provider comes from the `LLM_PROVIDER` environment variable. The gemini key comes from
+    the OS keyring, through `credentials`.
+
+    Raises:
+        MissingCredentialError: gemini, and the keyring entry is missing or the keyring is unusable.
+        ValueError: The provider is not supported.
+    """
     provider: str = os.getenv("LLM_PROVIDER", "gemini").lower()
 
     if provider == "mock":
@@ -80,19 +85,10 @@ def get_llm_engine(mock_data: list[dict[str, Any]] | None = None) -> LLMEngineIn
         return BedrockAdapter(region_name=os.getenv("AWS_DEFAULT_REGION", "us-east-1"))
 
     elif provider == "gemini":
-        api_key: str | None = os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            raise ValueError("CRITICAL: GEMINI_API_KEY environment variable is required.")
-        return GeminiAdapter(api_key=api_key)
+        return GeminiAdapter(api_key=credentials.get_credential("gemini"))
 
     else:
         raise ValueError(f"CRITICAL: Unsupported LLM_PROVIDER specified: {provider}")
-
-
-# if not os.environ.get("GEMINI_API_KEY"):
-#     raise ValueError(
-#         "CRITICAL: GEMINI_API_KEY not found. Please create a .env file and add your key."
-#     )
 
 
 def clean_filename(text: str | None) -> str:
@@ -831,6 +827,10 @@ def main() -> None:
         logger.error("A data path was refused.")
         print(f"ERROR: {exc}", file=sys.stderr)
         sys.exit(paths.EXIT_REFUSED)
+    except credentials.MissingCredentialError as exc:
+        logger.error("A provider credential is missing.")
+        print(f"ERROR: {exc}", file=sys.stderr)
+        sys.exit(1)
 
 
 def _main() -> None:

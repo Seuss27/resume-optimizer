@@ -99,7 +99,7 @@ def test_the_guard_fails_on_a_forbidden_tracked_file(tmp_path: Path, name: str) 
         ("runs/.env", "first component is a guarded directory"),
         ("runs/a.csv", "first component is a guarded directory"),
         ("tests/fixtures_x/a.csv", "*.csv outside the synthetic examples and fixtures"),
-        (".env", "dotenv file or directory"),
+        (".env", "env file or directory"),
         ("a_ats_b.txt", "generator ATS report"),
     ],
 )
