@@ -8,7 +8,7 @@ from typing import Any
 import pandas as pd
 
 from resume_optimizer import paths
-from resume_optimizer.logging_setup import get_logger
+from resume_optimizer.logging_setup import get_logger, setup_logging
 
 logger = get_logger(__name__)
 
@@ -206,6 +206,7 @@ def main() -> None:
     """Entry point for local execution: builds `master_data.json` in `RO_LEDGER_DIR`."""
     try:
         paths.validate_all()
+        setup_logging()
         ledger: Path = paths.ledger_dir()
         convert_sheets_to_master_data(
             experience_csv_path=ledger / "experience.csv",

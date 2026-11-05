@@ -2,6 +2,7 @@
 
 import os
 import subprocess
+import sys
 import types
 from collections.abc import Iterator
 from pathlib import Path
@@ -102,13 +103,25 @@ def ro_environment(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv(name, raising=False)
 
 
+@pytest.fixture(autouse=True)
+def teardown_logging_after_test() -> Iterator[None]:
+    """Removes the handlers a test's `setup_logging()` call left on the root logger.
+
+    Looks the module up in `sys.modules` rather than importing it, so the copy of this file that
+    the root-guard test stages keeps working.
+    """
+    yield
+    module = sys.modules.get("resume_optimizer.logging_setup")
+    if module is not None:
+        module.teardown_logging()
+
+
 @pytest.fixture
 def stand_in_resources(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Points the packaged prompt and template folders at `tmp_path`, for stand-in files.
 
-    Patched by string target: importing `resume_optimizer` here would run its logging set-up
-    before pytest's handlers exist, and the copy of this file that the root-guard test stages
-    must keep working.
+    Patched by string target: the copy of this file that the root-guard test stages must keep
+    working without importing `resume_optimizer` itself.
     """
     monkeypatch.setattr("resume_optimizer.resources.PROMPT_DIR", tmp_path)
     monkeypatch.setattr("resume_optimizer.resources.TEMPLATE_DIR", tmp_path)

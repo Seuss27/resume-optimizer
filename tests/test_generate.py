@@ -1120,6 +1120,90 @@ def test_no_log_record_carries_a_resolved_path(
             assert not any(path in value for path in forbidden)
 
 
+def test_a_logged_run_carries_none_of_the_seeded_text(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Neither the log file nor stderr holds the resume, requisition or company text (B4)."""
+    from resume_optimizer import logging_setup, paths, render
+    from resume_optimizer.logging_setup import setup_logging, teardown_logging
+
+    canaries: dict[str, str] = {
+        name: f"ZQX{name.upper()}CANARY"
+        for name in (
+            "contact",
+            "skill",
+            "req",
+            "summary",
+            "letter",
+            "company",
+            "role",
+            "feedback",
+            "keyword",
+            "pro",
+            "pdf",
+        )
+    }
+    (tmp_path / "ledger" / "master_data.json").write_text(
+        json.dumps({"contact": {"Name": canaries["contact"]}, "skills": [canaries["skill"]]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "system_prompt.txt").write_text("system prompt", encoding="utf-8")
+    (tmp_path / "ats_prompt.txt").write_text("ats prompt", encoding="utf-8")
+    (tmp_path / "resume_template.md").write_text("Resume", encoding="utf-8")
+    (tmp_path / "cover_letter_template.md").write_text("Letter", encoding="utf-8")
+
+    resume_payload = {
+        "job_metadata": {"company_name": canaries["company"], "role_title": canaries["role"]},
+        "professional_summary": canaries["summary"],
+        "selected_skills": [],
+        "tailored_companies": [],
+        "cover_letter_body": canaries["letter"],
+    }
+    ats_payload = {
+        "ats_score": 90,
+        "missing_keywords": [canaries["keyword"]],
+        "formatting_compliance": "ok",
+        "critical_feedback": canaries["feedback"],
+    }
+    adapter = MockLLMAdapter(mock_responses=[resume_payload, ats_payload])
+    monkeypatch.setattr("resume_optimizer.generate.get_llm_engine", lambda: adapter)
+    monkeypatch.setattr(generate.pypandoc, "get_pandoc_version", lambda: "2.0")
+    monkeypatch.setattr(
+        generate.pypandoc,
+        "convert_file",
+        lambda input_file, fmt, outputfile, **kw: Path(outputfile).write_text("x"),
+    )
+    desirability = {
+        "desirability_score": 80,
+        "salary_match": "ok",
+        "remote_match": "ok",
+        "benefits_analysis": "ok",
+        "pros": [canaries["pro"]],
+        "cons": [],
+    }
+    monkeypatch.setattr(
+        generate, "evaluate_desirability", lambda job_req, prefs, engine: desirability
+    )
+
+    def refuse_page_count(path: object) -> int:
+        raise render.PdfConversionError(canaries["pdf"])
+
+    monkeypatch.setattr(generate, "page_count", refuse_page_count)
+
+    setup_logging()
+    generate.generate_collateral(
+        canaries["req"], validate=True, evaluate_job=True, preserve_markdown=True
+    )
+    teardown_logging()
+
+    written: str = (paths.log_dir() / logging_setup.LOG_FILE_NAME).read_text(encoding="utf-8")
+    assert written.strip()
+    stderr: str = capsys.readouterr().err
+    for canary in canaries.values():
+        assert canary not in written
+        assert canary not in stderr
+
+
 def test_an_in_repo_runs_directory_is_refused_before_any_provider_call(
     monkeypatch: pytest.MonkeyPatch, fake_checkout: Path
 ) -> None:

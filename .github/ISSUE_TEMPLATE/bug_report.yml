@@ -7,6 +7,16 @@ body:
     attributes:
       value: |
         Thanks for taking the time to fill out this bug report! Please ensure you have checked the existing open issues before submitting.
+  - type: markdown
+    attributes:
+      value: |
+        **This repository is public.** Do not put any of the following in this report: resume or
+        cover-letter text, job requisitions, company or employer names, contact details, file
+        names from a run (they carry the company and role), or the contents of your `.env` file.
+
+        The log file under `RO_LOG_DIR` is meant to carry only IDs, counts and scores. Tracebacks
+        and warnings from third-party libraries can still quote content, so check every line
+        before you paste it.
   - type: textarea
     id: description
     attributes:
@@ -44,7 +54,7 @@ body:
     id: logs
     attributes:
       label: Relevant Logs or Tracebacks
-      description: Paste any relevant logs here. DO NOT paste plain text. Use the code block below.
+      description: Paste the log lines here, and remove anything personal from them first.
       render: shell
     validations:
       required: false

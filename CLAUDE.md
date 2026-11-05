@@ -152,7 +152,7 @@ repo rather than suppressing the rule.
 |---|---|
 | Credentials from `.env` / plain env vars, not the keyring — vs conventions | B5 |
 | Importing `generate.py` runs `load_dotenv()`, which reads the root `.env` (credentials, `LLM_PROVIDER`) into the test process — vs the rule that tests never read the repo root | B5 |
-| The working directory (the checkout root under the readme's Hatch flow) still receives the log file and `tune_template.py`'s outputs, and still supplies the pandoc reference document and `tune_template.py`'s tracked input — vs this file | B4 moves the log file to `RO_LOG_DIR`, D5 removes `tune_template.py`, F4 the legacy path that reads the reference document. The CSVs and `master_data.json` now live in `RO_LEDGER_DIR`, and C6 retires them |
+| The working directory (the checkout root under the readme's Hatch flow) still receives `tune_template.py`'s outputs, and still supplies the pandoc reference document and `tune_template.py`'s tracked input — vs this file | D5 removes `tune_template.py`, F4 the legacy path that reads the reference document. The CSVs and `master_data.json` now live in `RO_LEDGER_DIR`, and C6 retires them |
 | PRs target `main`, with no `develop` integration branch, as in claude-workbench | permanent (`pr_base: main`) |
 | Branch prefixes cover every commit type, not only `feat\|fix\|chore\|docs` | permanent |
 | `pr-title` rejects the `!` breaking-change marker that `conventions.md` allows | permanent |
