@@ -1,29 +1,37 @@
 # Next steps
 
-**Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `implementing`.
+**Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `implementing`. Task #63 (B8) is built
+and sits in PR #99, awaiting the maintainer's merge.
 
 **Just done:**
-- Drafted the spec comment for task #63 (B8) against `main` at `2e2cc31` with
-  `/way-of-working:spec-task 63`, and posted it on #63 as the maintainer
-  ([comment 6656592152](https://github.com/Seuss27/resume-optimizer/issues/63#issuecomment-6656592152)).
-- The spec-mode critic pass (architect, security-critic, docs-consistency) ran 4 rounds and
-  converged, with no second-opinion round. One optional tightening was left out: a local verbose
-  gitleaks re-run for a fork PR's finding must scan that PR's merge ref.
+- Built B8 in PR #99: the CI job set, `pr-title` and `ruleset-drift` workflows with their scripts
+  and tests, exact dependency pins, the Dependabot prefixes. Required checks are the jobs of
+  `ci.yml` and `pr-title`, mirrored in `.ai/project.yml`.
+- Switched secret scanning from a gitleaks job to the org's Betterleaks caller
+  (`secret-scan.yml`, pinned to the `603-Identity/devcontainers` v1.6 commit), after the maintainer
+  pointed at that repo's guidance. This departs from the issue text; the plan's B8 entry is updated.
+- `check_ruleset.py` can hold a check's `integration_id` (`check_integrations`); nothing declares one yet.
+- Critic pass (`architect`, `security-critic`, `docs-consistency`): 4 rounds on the first design,
+  converged; the Betterleaks switch, 2 rounds, converged; the `integration_id` change, 1 round,
+  converged. No second-opinion round was configured.
 
-**Next:** task #63 — build B8 from its spec comment (linked above) in its two-commit flow. Ship
-the first commit, stop once the new jobs are green on the PR, and hand back for the maintainer's
-`main-required-checks` swap before the `.ai/project.yml` mirror commit. Model: **sonnet**
-(coder).
+**Next:** task #63 — merge PR #99, which waits on the maintainer; no further build task is queued.
+Model: **sonnet** (coder). The follow-up below needs the merge first.
 
-**HITL Gate: NONE OPEN** — next gate: the maintainer swaps main-required-checks on GitHub before
-the B8 PR merges
+**After the merge (maintainer):** add `secrets / scan` to `main-required-checks` with
+`integration_id: 15368` and read the ruleset back, then declare `check_integrations` for it and
+mirror the check in `.ai/project.yml` in a small PR. No issue tracks this yet.
+
+**HITL Gate: NONE OPEN** — next gate: the maintainer merges PR 99, then requires secrets / scan on main-required-checks
 
 **Open for the owner (non-blocking):** the Sheet CSV export in #34 (on S03), which blocks C3. The
 `depends_on` markers on #52, #53, #54 (S06) and #55 (S07) name issues in other milestones, so
 `plan-depends.sh` reads each as waiting on every earlier item; worth its own backlog issue.
-Decide whether to delete or salvage the local branch `docs/sync-cursor-s02-b2-spec`, which resume
-did not prune. Still unconfirmed from B3: `pre-commit run --all-files` with ruff `v0.15.20`; the
-B8 build is a natural place to run it.
+Decide whether to delete or salvage the local branch `docs/sync-cursor-s02-b2-spec`. Still
+unconfirmed: `pre-commit run --all-files` with ruff `v0.15.20`. A decision entry in
+`docs/decisions.md` for the Betterleaks switch is optional. The org's consumer-workflow lint
+(`check-consumer-workflows.sh`) reports the review gate and the devcontainer-image caller missing;
+those are not B8 (the review gate is #88).
 
 **Pointers:**
 - the plan: [docs/proposals/pipeline-plan.md](../docs/proposals/pipeline-plan.md)
