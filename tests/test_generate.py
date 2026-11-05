@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import logging
 import os
 import sys
 from pathlib import Path
@@ -15,6 +16,8 @@ from resume_optimizer.adapters import MockLLMAdapter
 
 # Ensure the GEMINI_API_KEY check in generate.py passes during import.
 os.environ.setdefault("GEMINI_API_KEY", "test-key")
+
+pytestmark = pytest.mark.usefixtures("stand_in_resources")
 
 
 def test_clean_filename_normalizes_text() -> None:
@@ -94,7 +97,7 @@ def test_generate_collateral_markdown_structure_is_valid(
 ) -> None:
     """Verifies Jinja2 markdown templates compile correctly with standard layouts."""
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "master_data.json").write_text(
+    (tmp_path / "ledger" / "master_data.json").write_text(
         json.dumps({"contact": {"name": "Alex"}}), encoding="utf-8"
     )
     (tmp_path / "system_prompt.txt").write_text("system prompt", encoding="utf-8")
@@ -180,7 +183,7 @@ def test_generate_collateral_preserve_markdown_keeps_temp_files(
 ) -> None:
     """Ensures temp markdown files are successfully retained when the preserve flag is passed."""
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "master_data.json").write_text(
+    (tmp_path / "ledger" / "master_data.json").write_text(
         json.dumps({"contact": {"name": "Alex"}}), encoding="utf-8"
     )
     (tmp_path / "system_prompt.txt").write_text("system prompt", encoding="utf-8")
@@ -206,11 +209,11 @@ def test_generate_collateral_preserve_markdown_keeps_temp_files(
     monkeypatch.setattr(generate.pypandoc, "get_pandoc_version", mock_get_pandoc_version)
     monkeypatch.setattr(generate.pypandoc, "convert_file", mock_convert_file)
 
-    generate.generate_collateral("Job req", preserve_markdown=True)
+    run_dir = generate.generate_collateral("Job req", preserve_markdown=True)
 
-    assert (tmp_path / "temp_resume.md").exists()
-    assert (tmp_path / "temp_cl.md").exists()
-    assert (tmp_path / "Acme_Dev_Resume_A.docx").exists()
+    assert (run_dir / "temp_resume.md").exists()
+    assert (run_dir / "temp_cl.md").exists()
+    assert (run_dir / "Acme_Dev_Resume_A.docx").exists()
 
 
 def test_validate_resume_requests_ats_prompt_and_returns_json(
@@ -276,7 +279,7 @@ def test_generate_collateral_requires_system_prompt(
 ) -> None:
     """Ensures generate_collateral raises a FileNotFoundError if the prompt is missing."""
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "master_data.json").write_text(
+    (tmp_path / "ledger" / "master_data.json").write_text(
         json.dumps({"contact": {"name": "Alex"}}), encoding="utf-8"
     )
 
@@ -290,7 +293,7 @@ def test_generate_collateral_builds_docx_files(
     """Verifies full system compilation successfully produces final docx files."""
     monkeypatch.chdir(tmp_path)
 
-    (tmp_path / "master_data.json").write_text(
+    (tmp_path / "ledger" / "master_data.json").write_text(
         json.dumps({"contact": {"name": "Alex"}}), encoding="utf-8"
     )
     (tmp_path / "system_prompt.txt").write_text("system prompt", encoding="utf-8")
@@ -341,15 +344,15 @@ def test_generate_collateral_builds_docx_files(
     monkeypatch.setattr(generate.pypandoc, "get_pandoc_version", mock_get_pandoc_version)
     monkeypatch.setattr(generate.pypandoc, "convert_file", fake_convert_file)
 
-    generate.generate_collateral("Target job requisition")
+    run_dir = generate.generate_collateral("Target job requisition")
 
-    resume_output: Path = tmp_path / "Acme_Inc_Developer_Resume_A.docx"
-    cover_output: Path = tmp_path / "Acme_Inc_Developer_CoverLetter_A.docx"
+    resume_output: Path = run_dir / "Acme_Inc_Developer_Resume_A.docx"
+    cover_output: Path = run_dir / "Acme_Inc_Developer_CoverLetter_A.docx"
 
     assert resume_output.exists()
     assert cover_output.exists()
-    assert not (tmp_path / "temp_resume.md").exists()
-    assert not (tmp_path / "temp_cl.md").exists()
+    assert not (run_dir / "temp_resume.md").exists()
+    assert not (run_dir / "temp_cl.md").exists()
 
 
 def test_generate_collateral_performs_optional_ats_validation(
@@ -357,7 +360,7 @@ def test_generate_collateral_performs_optional_ats_validation(
 ) -> None:
     """Ensures ATS validation execution integrates into the compilation lifecycle."""
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "master_data.json").write_text(
+    (tmp_path / "ledger" / "master_data.json").write_text(
         json.dumps({"contact": {"name": "Alex"}}), encoding="utf-8"
     )
     (tmp_path / "system_prompt.txt").write_text("system prompt", encoding="utf-8")
@@ -430,7 +433,7 @@ def test_generate_collateral_skips_ats_validation_when_flag_not_set(
 ) -> None:
     """Ensures the ATS parser is skipped when the validation flag defaults to false."""
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "master_data.json").write_text(
+    (tmp_path / "ledger" / "master_data.json").write_text(
         json.dumps({"contact": {"name": "Alex"}}), encoding="utf-8"
     )
     (tmp_path / "system_prompt.txt").write_text("system prompt", encoding="utf-8")
@@ -465,10 +468,10 @@ def test_generate_collateral_skips_ats_validation_when_flag_not_set(
     monkeypatch.setattr(generate.pypandoc, "get_pandoc_version", mock_get_pandoc_version)
     monkeypatch.setattr(generate.pypandoc, "convert_file", mock_convert_file)
 
-    generate.generate_collateral("Target job requisition")
+    run_dir = generate.generate_collateral("Target job requisition")
 
-    assert (tmp_path / "Acme_Inc_Developer_Resume_A.docx").exists()
-    assert (tmp_path / "Acme_Inc_Developer_CoverLetter_A.docx").exists()
+    assert (run_dir / "Acme_Inc_Developer_Resume_A.docx").exists()
+    assert (run_dir / "Acme_Inc_Developer_CoverLetter_A.docx").exists()
 
 
 def test_generate_collateral_uses_unknown_prefix_when_metadata_is_missing(
@@ -477,7 +480,7 @@ def test_generate_collateral_uses_unknown_prefix_when_metadata_is_missing(
     """Ensures fallback dynamic prefix is used if metadata is absent or empty from AI response."""
     monkeypatch.chdir(tmp_path)
 
-    (tmp_path / "master_data.json").write_text(
+    (tmp_path / "ledger" / "master_data.json").write_text(
         json.dumps({"contact": {"name": "Alex"}}), encoding="utf-8"
     )
     (tmp_path / "system_prompt.txt").write_text("system prompt", encoding="utf-8")
@@ -509,11 +512,11 @@ def test_generate_collateral_uses_unknown_prefix_when_metadata_is_missing(
     monkeypatch.setattr(generate.pypandoc, "get_pandoc_version", mock_get_pandoc_version)
     monkeypatch.setattr(generate.pypandoc, "convert_file", mock_convert_file)
 
-    generate.generate_collateral("Target job requisition")
+    run_dir = generate.generate_collateral("Target job requisition")
 
     # Fixed: clean_filename("") safely normalizes to "Unknown" when keys are empty
-    assert (tmp_path / "Unknown_Unknown_Resume_A.docx").exists()
-    assert (tmp_path / "Unknown_Unknown_CoverLetter_A.docx").exists()
+    assert (run_dir / "Unknown_Unknown_Resume_A.docx").exists()
+    assert (run_dir / "Unknown_Unknown_CoverLetter_A.docx").exists()
 
 
 def test_evaluate_desirability_requests_prompt_and_returns_json(
@@ -572,7 +575,7 @@ def test_generate_collateral_saves_desirability_report_when_flag_set(
     monkeypatch.chdir(tmp_path)
 
     # 1. Mock minimal master data with profile preferences
-    (tmp_path / "master_data.json").write_text(
+    (tmp_path / "ledger" / "master_data.json").write_text(
         json.dumps({"contact": {"Name": "Alex Tester", "Pref_Min_Salary": "150k"}}),
         encoding="utf-8",
     )
@@ -622,10 +625,12 @@ def test_generate_collateral_saves_desirability_report_when_flag_set(
     monkeypatch.setattr(generate.pypandoc, "convert_file", mock_convert_file)
 
     # 6. Execute the pipeline
-    generate.generate_collateral("We are looking for a remote security expert.", evaluate_job=True)
+    run_dir = generate.generate_collateral(
+        "We are looking for a remote security expert.", evaluate_job=True
+    )
 
     # Assert filename existence and correct content formatting matches the mock payload
-    expected_report: Path = tmp_path / "Stark_Industries_Security_Lead_desirability_AT.txt"
+    expected_report: Path = run_dir / "Stark_Industries_Security_Lead_desirability_AT.txt"
     assert expected_report.exists()
     assert "Score: 95/100" in expected_report.read_text(encoding="utf-8")
 
@@ -636,7 +641,7 @@ def test_generate_collateral_master_mode_skips_cover_letter_and_validations(
     """Verifies that master mode overrides validations and avoids cover letter rendering."""
     monkeypatch.chdir(tmp_path)
 
-    (tmp_path / "master_data.json").write_text(
+    (tmp_path / "ledger" / "master_data.json").write_text(
         json.dumps({"contact": {"name": "Alex"}}), encoding="utf-8"
     )
     (tmp_path / "master_prompt.txt").write_text("master prompt rules", encoding="utf-8")
@@ -670,14 +675,16 @@ def test_generate_collateral_master_mode_skips_cover_letter_and_validations(
     monkeypatch.setattr(generate, "validate_resume", fail_if_called)
     monkeypatch.setattr(generate, "evaluate_desirability", fail_if_called)
 
-    generate.generate_collateral("Bypass text", validate=True, evaluate_job=True, master_mode=True)
+    run_dir = generate.generate_collateral(
+        "Bypass text", validate=True, evaluate_job=True, master_mode=True
+    )
 
-    resume_output: Path = tmp_path / "Master_Resume_Resume_A.docx"
-    cover_output: Path = tmp_path / "Master_Resume_CoverLetter_A.docx"
+    resume_output: Path = run_dir / "Master_Resume_Resume_A.docx"
+    cover_output: Path = run_dir / "Master_Resume_CoverLetter_A.docx"
 
     assert resume_output.exists()
     assert not cover_output.exists()
-    assert not (tmp_path / "temp_cl.md").exists()
+    assert not (run_dir / "temp_cl.md").exists()
 
 
 SYNTHETIC_CONTACT: dict[str, str] = {
@@ -726,7 +733,7 @@ def test_no_contact_field_reaches_the_provider_payload(
 ) -> None:
     """No contact value appears in the prompt or the system instruction sent to the provider."""
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "master_data.json").write_text(
+    (tmp_path / "ledger" / "master_data.json").write_text(
         json.dumps(
             {
                 "contact": SYNTHETIC_CONTACT,
@@ -784,7 +791,7 @@ def test_generate_collateral_renders_headline_and_letter_frame(
 ) -> None:
     """Code supplies the headline, location and the letter's date, addressee and Re: line."""
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "master_data.json").write_text(
+    (tmp_path / "ledger" / "master_data.json").write_text(
         json.dumps({"contact": SYNTHETIC_CONTACT}), encoding="utf-8"
     )
     (tmp_path / "system_prompt.txt").write_text("system prompt", encoding="utf-8")
@@ -799,7 +806,7 @@ def test_generate_collateral_renders_headline_and_letter_frame(
     captured: dict[str, str] = {}
 
     def fake_convert(input_file: str, fmt: str, outputfile: str, **kwargs: Any) -> None:
-        captured[input_file] = Path(input_file).read_text(encoding="utf-8")
+        captured[Path(input_file).name] = Path(input_file).read_text(encoding="utf-8")
         Path(outputfile).write_text("x", encoding="utf-8")
 
     payload: dict[str, Any] = {
@@ -836,7 +843,7 @@ def test_unstated_hiring_manager_is_dropped_from_the_letter(
 ) -> None:
     """A hiring manager the requisition does not name never reaches the letter."""
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "master_data.json").write_text(
+    (tmp_path / "ledger" / "master_data.json").write_text(
         json.dumps({"contact": SYNTHETIC_CONTACT}), encoding="utf-8"
     )
     (tmp_path / "system_prompt.txt").write_text("system prompt", encoding="utf-8")
@@ -848,7 +855,7 @@ def test_unstated_hiring_manager_is_dropped_from_the_letter(
     captured: dict[str, str] = {}
 
     def fake_convert(input_file: str, fmt: str, outputfile: str, **kwargs: Any) -> None:
-        captured[input_file] = Path(input_file).read_text(encoding="utf-8")
+        captured[Path(input_file).name] = Path(input_file).read_text(encoding="utf-8")
         Path(outputfile).write_text("x", encoding="utf-8")
 
     payload: dict[str, Any] = {
@@ -956,7 +963,7 @@ def test_career_years_is_written_by_code_and_a_model_years_claim_is_flagged(
         "all_skills": ["Python"],
         **_roles(f"{started} - Present"),
     }
-    (tmp_path / "master_data.json").write_text(json.dumps(data), encoding="utf-8")
+    (tmp_path / "ledger" / "master_data.json").write_text(json.dumps(data), encoding="utf-8")
     (tmp_path / "system_prompt.txt").write_text("system prompt", encoding="utf-8")
     (tmp_path / "resume_template.md").write_text(
         "{{ headline }}|{{ career_years }} years of experience", encoding="utf-8"
@@ -968,7 +975,7 @@ def test_career_years_is_written_by_code_and_a_model_years_claim_is_flagged(
     captured: dict[str, str] = {}
 
     def fake_convert(input_file: str, fmt: str, outputfile: str, **kwargs: Any) -> None:
-        captured[input_file] = Path(input_file).read_text(encoding="utf-8")
+        captured[Path(input_file).name] = Path(input_file).read_text(encoding="utf-8")
         Path(outputfile).write_text("x", encoding="utf-8")
 
     def run(summary: str) -> tuple[str, MockLLMAdapter]:
@@ -1006,7 +1013,7 @@ def test_resume_and_letter_share_the_reference_document(
 ) -> None:
     """The letter gets the resume's margins and styles, and both stay sandboxed."""
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "master_data.json").write_text(
+    (tmp_path / "ledger" / "master_data.json").write_text(
         json.dumps({"contact": SYNTHETIC_CONTACT}), encoding="utf-8"
     )
     (tmp_path / "system_prompt.txt").write_text("system prompt", encoding="utf-8")
@@ -1040,3 +1047,110 @@ def test_resume_and_letter_share_the_reference_document(
     for extra_args in calls:
         assert "--reference-doc=resume_reference.docx" in extra_args
         assert "--sandbox" in extra_args
+
+
+def test_main_exits_with_status_3_before_reading_stdin_when_a_path_is_in_the_repo(
+    monkeypatch: pytest.MonkeyPatch,
+    fake_checkout: Path,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A data path inside a checkout is refused at start-up, naming the variable only."""
+    monkeypatch.setenv("RO_RUNS_DIR", str(fake_checkout / "runs"))
+    monkeypatch.setattr(sys, "argv", ["generate-resume"])
+
+    def refuse_to_read() -> str:
+        raise AssertionError("stdin was read")
+
+    monkeypatch.setattr(sys.stdin, "read", refuse_to_read)
+
+    with pytest.raises(SystemExit) as raised:
+        generate.main()
+
+    assert raised.value.code == 3
+    stderr: str = capsys.readouterr().err
+    assert "RO_RUNS_DIR" in stderr
+    assert str(tmp_path) not in stderr
+    assert tmp_path.as_posix() not in stderr
+
+
+def test_an_explicit_data_path_in_the_repo_is_refused(fake_checkout: Path) -> None:
+    from resume_optimizer import paths
+
+    with pytest.raises(paths.DataPathRefusedError):
+        generate.generate_collateral("Job req", data_path=fake_checkout / "master_data.json")
+
+
+def test_no_log_record_carries_a_resolved_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The ATS, desirability and preserved-Markdown log extras carry bare names, never paths."""
+    (tmp_path / "ledger" / "master_data.json").write_text(
+        json.dumps({"contact": {"Name": "Alex Tester"}}), encoding="utf-8"
+    )
+    (tmp_path / "system_prompt.txt").write_text("system prompt", encoding="utf-8")
+    (tmp_path / "ats_prompt.txt").write_text("ats prompt", encoding="utf-8")
+    (tmp_path / "resume_template.md").write_text("Resume", encoding="utf-8")
+    (tmp_path / "cover_letter_template.md").write_text("Letter", encoding="utf-8")
+
+    resume_payload = {
+        "job_metadata": {"company_name": "Acme", "role_title": "Dev"},
+        "professional_summary": "Builds software.",
+        "selected_skills": [],
+        "tailored_companies": [],
+        "cover_letter_body": "Hello",
+    }
+    ats_payload = {
+        "ats_score": 90,
+        "missing_keywords": [],
+        "formatting_compliance": "ok",
+        "critical_feedback": "none",
+    }
+    adapter = MockLLMAdapter(mock_responses=[resume_payload, ats_payload])
+    monkeypatch.setattr("resume_optimizer.generate.get_llm_engine", lambda: adapter)
+    monkeypatch.setattr(generate.pypandoc, "get_pandoc_version", lambda: "2.0")
+    monkeypatch.setattr(
+        generate.pypandoc,
+        "convert_file",
+        lambda input_file, fmt, outputfile, **kw: Path(outputfile).write_text("x"),
+    )
+    desirability = {
+        "desirability_score": 80,
+        "salary_match": "ok",
+        "remote_match": "ok",
+        "benefits_analysis": "ok",
+        "pros": [],
+        "cons": [],
+    }
+    monkeypatch.setattr(generate, "evaluate_desirability", lambda job_req, prefs: desirability)
+
+    with caplog.at_level(logging.INFO):
+        generate.generate_collateral(
+            "A job requisition.", validate=True, evaluate_job=True, preserve_markdown=True
+        )
+
+    forbidden: list[str] = [str(tmp_path), str(tmp_path.resolve()), tmp_path.as_posix()]
+    assert caplog.records
+    for record in caplog.records:
+        values: list[str] = [record.getMessage()]
+        values += [v for v in record.__dict__.values() if isinstance(v, str)]
+        for value in values:
+            assert not any(path in value for path in forbidden)
+
+
+def test_an_in_repo_runs_directory_is_refused_before_any_provider_call(
+    monkeypatch: pytest.MonkeyPatch, fake_checkout: Path
+) -> None:
+    from resume_optimizer import paths
+
+    (Path("ledger") / "master_data.json").write_text(
+        json.dumps({"contact": {"name": "Alex"}}), encoding="utf-8"
+    )
+    monkeypatch.setenv("RO_RUNS_DIR", str(fake_checkout / "runs"))
+
+    def no_provider() -> None:
+        raise AssertionError("the provider was called")
+
+    monkeypatch.setattr("resume_optimizer.generate.get_llm_engine", no_provider)
+    with pytest.raises(paths.DataPathRefusedError):
+        generate.generate_collateral("Job req")

@@ -43,3 +43,16 @@ jobs:
       run: |
         # Runs linting, import checks, and full security scans seamlessly
         ruff check .
+
+    - name: Check Tracked Paths
+      run: |
+        python .github/scripts/check_tracked_paths.py
+
+    - name: Wheel Smoke Test
+      run: |
+        python -m pip wheel . --no-deps -w "$RUNNER_TEMP/wheel"
+        python -m venv "$RUNNER_TEMP/smoke-venv"
+        "$RUNNER_TEMP/smoke-venv/bin/python" -m pip install "$RUNNER_TEMP"/wheel/*.whl
+        mkdir "$RUNNER_TEMP/elsewhere"
+        cd "$RUNNER_TEMP/elsewhere"
+        "$RUNNER_TEMP/smoke-venv/bin/python" -I "$GITHUB_WORKSPACE/.github/scripts/wheel_smoke.py" "$RUNNER_TEMP"/wheel/*.whl

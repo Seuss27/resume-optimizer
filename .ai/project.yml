@@ -44,12 +44,7 @@ code_paths:
   - pyproject.toml
   - .gitignore              # the main guard against personal data being committed
   - .pre-commit-config.yaml
-  - system_prompt.txt       # root prompts and templates, until B2 and D5 move or remove them
-  - ats_prompt.txt
-  - desirability_prompt.txt
-  - resume_template.md
-  - cover_letter_template.md
-  - tune_template.py
+  - tune_template.py        # stays until D5 removes it
 
 # ── the local green gate ─────────────────────────────────────────────────────
 # A local pre-check; CI on the PR is the gate of record.

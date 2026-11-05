@@ -39,7 +39,7 @@ governs. Every local deviation is listed under *Deviations and known gaps*.
 
   | Diff touches | Propose |
   |---|---|
-  | code paths: `src/`, `tests/`, `.claude/`, `.github/`, `pyproject.toml`, `.gitignore`, `.pre-commit-config.yaml`, and the root `*_prompt.txt`, `*_template.md`, `tune_template.py` until B2 and D5 move or remove them | `architect` and/or `security-critic` |
+  | code paths: `src/`, `tests/`, `.claude/`, `.github/`, `pyproject.toml`, `.gitignore`, `.pre-commit-config.yaml`, and the root `tune_template.py` until D5 removes it | `architect` and/or `security-critic` |
   | a load-bearing doc (below) | `docs-consistency` |
   | a newly added doc | `docs-consistency`, plus `security-critic` if it covers credentials, data handling or operations |
   | `docs/`, `.gitignore`, logging, fixtures, or anything else that could carry personal data | `security-critic` (rule 4) |
@@ -135,7 +135,8 @@ hatch run lint                 # ruff check .
 hatch run format --check       # ruff format --check
 ```
 
-`.github/workflows/ci.yml` runs the equivalent checks, and it is the gate of record. The
+`.github/workflows/ci.yml` runs the equivalent checks, plus the tracked-path guard and the
+wheel smoke, and it is the gate of record. The
 `main-required-checks` ruleset requires it, and `.ai/project.yml` mirrors that ruleset. B8
 aligns the CI and security jobs with the glunk-works repos.
 
@@ -153,7 +154,7 @@ repo rather than suppressing the rule.
 | Credentials from `.env` / plain env vars, not the keyring — vs conventions | B5 |
 | Importing `generate.py` runs `load_dotenv()`, which reads the root `.env` (credentials, `LLM_PROVIDER`) into the test process — vs the rule that tests never read the repo root | B5 |
 | Unpinned dependencies; no SBOM, dependency audit, secrets scan, workflow lint or PR-title check — vs conventions and the glunk-works repos | B8 |
-| Generated outputs and personal CSVs in the root (git-ignored) — vs this file | B2 makes output paths configurable; C6 retires the CSVs and `master_data.json` |
+| The working directory (the checkout root under the readme's Hatch flow) still receives the log file and `tune_template.py`'s outputs, and still supplies the pandoc reference document and `tune_template.py`'s tracked input — vs this file | B4 moves the log file to `RO_LOG_DIR`, D5 removes `tune_template.py`, F4 the legacy path that reads the reference document. The CSVs and `master_data.json` now live in `RO_LEDGER_DIR`, and C6 retires them |
 | PRs target `main`, with no `develop` integration branch, as in claude-workbench | permanent (`pr_base: main`) |
 | Branch prefixes cover every commit type, not only `feat\|fix\|chore\|docs` | permanent |
 | No `sprint/NN-slug` branches: one `<type>/<issue#>-<slug>` branch per issue, with sprints as milestones | permanent; watch `ship` and `archive-sprint` for assumptions about `sprint/` branches |

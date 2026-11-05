@@ -1,21 +1,23 @@
 """Data preprocessor compiling user experience and profile CSVs into unified JSON state."""
 
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
 
+from resume_optimizer import paths
 from resume_optimizer.logging_setup import get_logger
 
 logger = get_logger(__name__)
 
 
-def load_profile(profile_csv_path: str) -> dict[str, Any]:
+def load_profile(profile_csv_path: str | Path) -> dict[str, Any]:
     """Reads a two-column CSV (Key, Value) into a dictionary."""
     csv_path: Path = Path(profile_csv_path)
     if not csv_path.exists():
-        raise FileNotFoundError(f"Could not find {profile_csv_path}. Please ensure it exists.")
+        raise FileNotFoundError(f"Could not find {csv_path.name}. Please ensure it exists.")
 
     df_profile: pd.DataFrame = pd.read_csv(csv_path)
 
@@ -26,13 +28,17 @@ def load_profile(profile_csv_path: str) -> dict[str, Any]:
 
 
 def convert_sheets_to_master_data(
-    experience_csv_path: str,
-    profile_csv_path: str,
-    certs_csv_path: str = "certifications.csv",
-    output_json_path: str = "master_data.json",
-    education_csv_path: str = "education.csv",
+    experience_csv_path: str | Path,
+    profile_csv_path: str | Path,
+    certs_csv_path: str | Path = "certifications.csv",
+    output_json_path: str | Path = "master_data.json",
+    education_csv_path: str | Path = "education.csv",
 ) -> None:
-    """Parses experience, profile, certs, and education CSVs into a centralized JSON master file."""
+    """Parses experience, profile, certs, and education CSVs into a centralized JSON master file.
+
+    Raises:
+        DataPathRefusedError: If any path resolves inside a checkout of this repository.
+    """
     # Support a common 3-argument call pattern where the third positional
     # argument is intended to be the output path.
     if (
@@ -42,13 +48,20 @@ def convert_sheets_to_master_data(
     ):
         output_json_path, certs_csv_path = certs_csv_path, "certifications.csv"
 
+    # Use the resolved paths from here on, so the path that is checked is the path that is used.
+    experience_csv_path = paths.refuse_in_repo(experience_csv_path)
+    profile_csv_path = paths.refuse_in_repo(profile_csv_path)
+    certs_csv_path = paths.refuse_in_repo(certs_csv_path)
+    output_json_path = paths.refuse_in_repo(output_json_path)
+    education_csv_path = paths.refuse_in_repo(education_csv_path)
+
     # 1. Load the abstracted profile details
     user_profile: dict[str, Any] = load_profile(profile_csv_path)
 
     # 2. Read the experience CSV
     experience_path: Path = Path(experience_csv_path)
     if not experience_path.exists():
-        raise FileNotFoundError(f"Could not find {experience_csv_path}. Please ensure it exists.")
+        raise FileNotFoundError(f"Could not find {experience_path.name}. Please ensure it exists.")
 
     df_experience: pd.DataFrame = pd.read_csv(experience_path)
 
@@ -146,13 +159,13 @@ def convert_sheets_to_master_data(
                 if year and year != "nan":
                     cert_string += f" ({year})"
                 master_data["certifications"].append(cert_string)
-    elif certs_csv_path == "certifications.csv":
+    elif certs_path.name == "certifications.csv":
         logger.warning(
             "Default certifications file not found; building state without certifications.",
-            extra={"certs_csv_path": certs_csv_path},
+            extra={"certs_csv_path": certs_path.name},
         )
     else:
-        raise FileNotFoundError(f"Could not find {certs_csv_path}. Please ensure it exists.")
+        raise FileNotFoundError(f"Could not find {certs_path.name}. Please ensure it exists.")
 
     # 8. Extract Education (Graceful Warning Fallback)
     edu_path: Path = Path(education_csv_path)
@@ -170,13 +183,13 @@ def convert_sheets_to_master_data(
                     "year": year if year and year != "nan" else "",
                 }
                 master_data["education"].append(edu_entry)
-    elif education_csv_path == "education.csv":
+    elif edu_path.name == "education.csv":
         logger.warning(
             "Default education file not found; building state without education.",
-            extra={"education_csv_path": education_csv_path},
+            extra={"education_csv_path": edu_path.name},
         )
     else:
-        raise FileNotFoundError(f"Could not find {education_csv_path}. Please ensure it exists.")
+        raise FileNotFoundError(f"Could not find {edu_path.name}. Please ensure it exists.")
 
     # 9. Save out the structured JSON
     out_path: Path = Path(output_json_path)
@@ -185,14 +198,26 @@ def convert_sheets_to_master_data(
 
     logger.info(
         "Successfully built master data from spreadsheets.",
-        extra={"output_json_path": output_json_path},
+        extra={"output_json_path": out_path.name},
     )
 
 
 def main() -> None:
-    """Entry point for local execution to build unified state."""
-    # Ensure you have downloaded your two tabs as 'experience.csv' and 'profile.csv'
-    convert_sheets_to_master_data("experience.csv", "profile.csv")
+    """Entry point for local execution: builds `master_data.json` in `RO_LEDGER_DIR`."""
+    try:
+        paths.validate_all()
+        ledger: Path = paths.ledger_dir()
+        convert_sheets_to_master_data(
+            experience_csv_path=ledger / "experience.csv",
+            profile_csv_path=ledger / "profile.csv",
+            certs_csv_path=ledger / "certifications.csv",
+            output_json_path=ledger / "master_data.json",
+            education_csv_path=ledger / "education.csv",
+        )
+    except paths.DataPathRefusedError as exc:
+        logger.error("A data path was refused.")
+        print(f"ERROR: {exc}", file=sys.stderr)
+        sys.exit(paths.EXIT_REFUSED)
 
 
 if __name__ == "__main__":

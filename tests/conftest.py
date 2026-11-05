@@ -87,6 +87,45 @@ def run_in_tmp_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 @pytest.fixture(autouse=True)
+def ro_environment(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Points the data-path variables into `tmp_path`, so no test touches the per-user folders.
+
+    The ledger directory is created, since resolvers never create one. The three optional
+    variables are unset.
+    """
+    ledger: Path = tmp_path / "ledger"
+    ledger.mkdir()
+    monkeypatch.setenv("RO_LEDGER_DIR", str(ledger))
+    monkeypatch.setenv("RO_RUNS_DIR", str(tmp_path / "runs"))
+    monkeypatch.setenv("RO_LOG_DIR", str(tmp_path / "logs"))
+    for name in ("RO_EXEMPLAR_DIR", "RO_SEND_DIR", "RO_TEMPLATE_DIR"):
+        monkeypatch.delenv(name, raising=False)
+
+
+@pytest.fixture
+def stand_in_resources(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Points the packaged prompt and template folders at `tmp_path`, for stand-in files.
+
+    Patched by string target: importing `resume_optimizer` here would run its logging set-up
+    before pytest's handlers exist, and the copy of this file that the root-guard test stages
+    must keep working.
+    """
+    monkeypatch.setattr("resume_optimizer.resources.PROMPT_DIR", tmp_path)
+    monkeypatch.setattr("resume_optimizer.resources.TEMPLATE_DIR", tmp_path)
+    return tmp_path
+
+
+@pytest.fixture
+def fake_checkout(tmp_path: Path) -> Path:
+    """A directory that looks like a working tree of this repo, for the in-repo refusal tests."""
+    root: Path = tmp_path / "fake_checkout"
+    (root / ".git").mkdir(parents=True)
+    (root / "src" / "resume_optimizer").mkdir(parents=True)
+    (root / "src" / "resume_optimizer" / "__init__.py").write_text("", encoding="utf-8")
+    return root
+
+
+@pytest.fixture(autouse=True)
 def no_real_converters(monkeypatch: pytest.MonkeyPatch) -> None:
     """Stops any test from launching Word or LibreOffice. Render tests install their own stub."""
 

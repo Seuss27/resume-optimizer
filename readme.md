@@ -83,9 +83,9 @@ If you prefer a standard local virtual environment workflow using standard pytho
 
 2. **Hydrate your Data:**
    * This project includes dummy templates to demonstrate the required data schema.
-   * Copy `example_profile.csv` and rename it to `profile.csv`, then update it with your actual contact info.
-   * Copy `example_experience.csv` and rename it to `experience.csv`, then populate it with your tabular work history.
-   * *(Note: Your actual `profile.csv` and `experience.csv` files are ignored by git to protect your privacy).*
+   * Put your data in `RO_LEDGER_DIR`. Plan §3.1 gives its default, and the repo checkout itself is refused as a data location.
+   * Copy `example_profile.csv` into it as `profile.csv`, then update it with your actual contact info.
+   * Copy `example_experience.csv` into it as `experience.csv`, then populate it with your tabular work history.
 
 ## Usage
 
@@ -122,7 +122,7 @@ generate-resume --validate
 
 *When running the generation engine, paste the text of the job description when prompted. When finished pasting, press `Enter`, then `CTRL+D` (Mac/Linux) or `CTRL+Z` then `Enter` (Windows) to submit.*
 
-Check your root project directory for your freshly deployed `[Company]_[Role]_Resume.docx` and `[Company]_[Role]_CoverLetter.docx`.
+Each run prints its run directory (see plan §3.1 for where run directories live). Your freshly deployed `[Company]_[Role]_Resume_[Initials].docx` and `[Company]_[Role]_CoverLetter_[Initials].docx` are in it.
 
 ## Interpreting ATS Validation Output
 
@@ -175,17 +175,10 @@ resume-optimizer/
 │   └── workflows/ci.yml     # Automated multi-environment GitHub Actions pipeline
 ├── src/
 │   └── resume_optimizer/
-│       ├── __init__.py      # Package indicator
-│       ├── build_state.py   # Data preprocessor (CSV to JSON)
-│       ├── generate.py      # Core AI engine (Gemini API, templates, compilation)
-│       └── logging_setup.py # Unified structured logging configuration
+│       ├── prompts/         # Packaged prompts
+│       └── templates/       # Packaged Jinja2 layouts
 ├── tests/                   # Complete unit test suite
-├── resume_template.md       # Jinja2 layout for the resume
-├── cover_letter_template.md # Jinja2 layout for the cover letter
-├── resume_reference.docx    # MS Word styles reference document used by Pandoc
-├── system_prompt.txt        # Recruiter instructional alignment token fed to Gemini
-├── ats_prompt.txt           # ATS validation system prompt used by the optional review pass
-├── desirability_prompt.txt  # Job desirability evaluation prompt for --score-job
+├── resume_reference.docx    # Your MS Word styles document for Pandoc (git-ignored; supply it)
 ├── tune_template.py         # Utility script for tuning MS Word outputs locally
 ├── dummy_gemini_output.json # Mock AI data payload used by tune_template.py
 ├── pyproject.toml           # Declarative tool settings, dependencies, and metadata

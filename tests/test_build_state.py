@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from resume_optimizer.build_state import convert_sheets_to_master_data, load_profile
+from resume_optimizer.build_state import convert_sheets_to_master_data, load_profile, main
 
 
 def test_load_profile_reads_csv(tmp_path: Path) -> None:
@@ -109,3 +109,74 @@ def test_convert_sheets_to_master_data_missing_certs_file_raises(tmp_path: Path)
             "missing_certs.csv",
             str(tmp_path / "out.json"),
         )
+
+
+def _ledger(tmp_path: Path) -> Path:
+    return tmp_path / "ledger"
+
+
+def _write_inputs(ledger: Path) -> None:
+    (ledger / "profile.csv").write_text("Key,Value\nname,Jordan\n", encoding="utf-8")
+    (ledger / "experience.csv").write_text("Company,Role Title\nAcme,Engineer\n", encoding="utf-8")
+
+
+def test_main_reads_and_writes_in_the_ledger_directory(tmp_path: Path) -> None:
+    """`main` takes every CSV from `RO_LEDGER_DIR` and writes `master_data.json` there."""
+    ledger: Path = _ledger(tmp_path)
+    _write_inputs(ledger)
+    (ledger / "certifications.csv").write_text(
+        "Name,Issuer,Year\nCert One,Issuer,2020\n", encoding="utf-8"
+    )
+
+    main()
+
+    data: dict[str, Any] = json.loads((ledger / "master_data.json").read_text(encoding="utf-8"))
+    assert data["contact"] == {"name": "Jordan"}
+    assert data["certifications"] == ["Cert One | Issuer (2020)"]
+    assert not (tmp_path / "master_data.json").exists()
+
+
+def test_main_builds_with_only_the_profile_and_experience_files(tmp_path: Path) -> None:
+    ledger: Path = _ledger(tmp_path)
+    _write_inputs(ledger)
+
+    main()
+
+    data: dict[str, Any] = json.loads((ledger / "master_data.json").read_text(encoding="utf-8"))
+    assert data["certifications"] == [] and data["education"] == []
+
+
+def test_main_exits_with_status_3_on_an_in_repo_ledger_directory(
+    monkeypatch: pytest.MonkeyPatch, fake_checkout: Path
+) -> None:
+    monkeypatch.setenv("RO_LEDGER_DIR", str(fake_checkout / "ledger"))
+    with pytest.raises(SystemExit) as raised:
+        main()
+    assert raised.value.code == 3
+
+
+def test_a_missing_input_error_names_the_file_only(tmp_path: Path) -> None:
+    with pytest.raises(FileNotFoundError) as raised:
+        main()
+    message: str = str(raised.value)
+    forbidden: list[str] = [str(tmp_path), str(tmp_path.resolve()), tmp_path.as_posix()]
+    assert "profile.csv" in message
+    assert not any(path in message for path in forbidden)
+
+
+def test_a_home_relative_output_path_is_written_where_it_was_checked(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    ledger: Path = _ledger(tmp_path)
+    _write_inputs(ledger)
+
+    convert_sheets_to_master_data(
+        experience_csv_path=ledger / "experience.csv",
+        profile_csv_path=ledger / "profile.csv",
+        output_json_path="~/out.json",
+    )
+
+    assert (tmp_path / "out.json").exists()
+    assert not Path("~").exists()

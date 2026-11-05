@@ -14,8 +14,8 @@ import pypandoc
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
-from jinja2 import Environment, FileSystemLoader, select_autoescape
 
+from resume_optimizer import paths, resources
 from resume_optimizer.adapters import BedrockAdapter, GeminiAdapter, MockLLMAdapter
 from resume_optimizer.checks import UnsupportedReport, check_unsupported
 from resume_optimizer.interfaces import LLMEngineInterface
@@ -114,20 +114,15 @@ def clean_filename(text: str | None) -> str:
 
 
 def load_prompt(prompt_filename: str) -> str:
-    """Loads a prompt text file from disk.
+    """Loads a packaged prompt text file.
 
     Args:
-        prompt_filename: The local filename of the text file to read.
+        prompt_filename: The file name of the prompt to read.
 
     Returns:
         The string contents of the requested file.
     """
-    prompt_path: Path = Path(prompt_filename)
-    if not prompt_path.exists():
-        raise FileNotFoundError(f"{prompt_filename} is missing.")
-
-    with prompt_path.open("r", encoding="utf-8") as f:
-        return f.read()
+    return resources.read_prompt(prompt_filename)
 
 
 def validate_resume(
@@ -456,8 +451,8 @@ def generate_collateral(
     evaluate_job: bool = False,
     grouped_layout: bool = True,
     master_mode: bool = False,
-    data_path: str | Path = "master_data.json",
-) -> None:
+    data_path: str | Path | None = None,
+) -> Path:
     """Generates tailored resume and cover letter content using Gemini and Pandoc.
 
     Args:
@@ -467,12 +462,22 @@ def generate_collateral(
         evaluate_job: If True, evaluates the job against personal preferences.
         grouped_layout: If True (the default), groups roles under each employer.
         master_mode: If True, generates a comprehensive resume and skips cover letter.
+        data_path: The master data file. None means `master_data.json` in `RO_LEDGER_DIR`.
+
+    Returns:
+        The run directory every output was written to.
+
+    Raises:
+        DataPathRefusedError: If a data path resolves inside a checkout of this repository.
     """
+    paths.runs_dir()  # refuse a bad runs path before any provider call; the mkdir stays lazy
     # 1. Initialize our decoupled engine
     llm_engine: LLMEngineInterface = get_llm_engine()
 
     # 2. Load Local State
-    master_data_path: Path = Path(data_path)
+    master_data_path: Path = paths.refuse_in_repo(
+        paths.ledger_dir() / "master_data.json" if data_path is None else data_path
+    )
     if not master_data_path.exists():
         raise FileNotFoundError("master_data.json is missing. Run the preprocessor script first.")
 
@@ -492,12 +497,7 @@ def generate_collateral(
     }
 
     prompt_file: str = "master_prompt.txt" if master_mode else "system_prompt.txt"
-    sys_prompt_path: Path = Path(prompt_file)
-    if not sys_prompt_path.exists():
-        raise FileNotFoundError(f"{prompt_file} is missing.")
-
-    with sys_prompt_path.open("r", encoding="utf-8") as f:
-        system_prompt: str = f.read()
+    system_prompt: str = load_prompt(prompt_file)
 
     if master_mode:
         evaluate_job = False
@@ -592,9 +592,7 @@ def generate_collateral(
     logger.info("AI processing complete.", extra={"output_prefix": prefix})
 
     # 5. Inject Data into Jinja2 Templates
-    env: Environment = Environment(
-        loader=FileSystemLoader("."), autoescape=select_autoescape(["html", "xml"])
-    )
+    env = resources.template_environment()
     resume_template = env.get_template("resume_template.md")
 
     def render_resume(contact: dict[str, str]) -> str:
@@ -625,11 +623,19 @@ def generate_collateral(
             cover_letter_body=gemini_output.get("cover_letter_body", ""),
         )
 
+    run_dirs: list[Path] = []
+
+    def run_dir() -> Path:
+        """Creates the run directory on first use, just before the first output write."""
+        if not run_dirs:
+            run_dirs.append(paths.new_run_dir())
+        return run_dirs[0]
+
     if evaluate_job:
         eval_results: dict[str, Any] = evaluate_desirability(job_req_text, preferences)
         print_desirability_summary(eval_results)
 
-        desirability_file: Path = Path(f"{prefix}_desirability_{initials}.txt")
+        desirability_file: Path = run_dir() / f"{prefix}_desirability_{initials}.txt"
         with desirability_file.open("w", encoding="utf-8") as f:
             f.write("=== Job Desirability Report ===\n")
             f.write(f"Score: {eval_results.get('desirability_score', 0)}/100\n\n")
@@ -651,7 +657,7 @@ def generate_collateral(
 
         logger.info(
             "Saved job desirability metrics to file.",
-            extra={"desirability_file": str(desirability_file)},
+            extra={"desirability_file": desirability_file.name},
         )
 
     if validate:
@@ -662,7 +668,7 @@ def generate_collateral(
 
         print_ats_validation_summary(ats_results)
 
-        ats_file: Path = Path(f"{prefix}_ats_{initials}.txt")
+        ats_file: Path = run_dir() / f"{prefix}_ats_{initials}.txt"
         with ats_file.open("w", encoding="utf-8") as f:
             f.write("=== ATS Validation Results ===\n")
             f.write(f"Score: {ats_results.get('ats_score', 0)}/100\n")
@@ -683,7 +689,7 @@ def generate_collateral(
 
         logger.info(
             "Saved ATS validation results to file.",
-            extra={"ats_file": str(ats_file)},
+            extra={"ats_file": ats_file.name},
         )
 
     # 6. Compile Final Outputs
@@ -699,14 +705,15 @@ def generate_collateral(
         logger.info("Pandoc engine not found; downloading it now.")
         pypandoc.download_pandoc()
 
-    temp_resume: Path = Path("temp_resume.md")
+    out_dir: Path = run_dir()
+    temp_resume: Path = out_dir / "temp_resume.md"
 
     with temp_resume.open("w", encoding="utf-8") as f:
         f.write(resume_markdown)
 
     temp_cl: Path | None = None
     if not master_mode:
-        temp_cl = Path("temp_cl.md")
+        temp_cl = out_dir / "temp_cl.md"
         with temp_cl.open("w", encoding="utf-8") as f:
             f.write(cl_markdown)
 
@@ -715,7 +722,7 @@ def generate_collateral(
     pypandoc.convert_file(
         str(temp_resume),
         "docx",
-        outputfile=f"{prefix}_Resume_{initials}.docx",
+        outputfile=str(out_dir / expected_docs["resume_file"]),
         format=PANDOC_INPUT_FORMAT,
         extra_args=["--reference-doc=resume_reference.docx", *PANDOC_SAFETY_ARGS],
     )
@@ -724,7 +731,7 @@ def generate_collateral(
         pypandoc.convert_file(
             str(temp_cl),
             "docx",
-            outputfile=f"{prefix}_CoverLetter_{initials}.docx",
+            outputfile=str(out_dir / expected_docs["cover_letter_file"]),
             format=PANDOC_INPUT_FORMAT,
             extra_args=["--reference-doc=resume_reference.docx", *PANDOC_SAFETY_ARGS],
         )
@@ -734,9 +741,9 @@ def generate_collateral(
         if not master_mode and temp_cl:
             temp_cl.unlink()
     else:
-        preserved: dict[str, str] = {"resume_md": str(temp_resume)}
+        preserved: dict[str, str] = {"resume_md": temp_resume.name}
         if not master_mode and temp_cl:
-            preserved["cover_letter_md"] = str(temp_cl)
+            preserved["cover_letter_md"] = temp_cl.name
         logger.info("Preserving markdown files for template tuning.", extra=preserved)
 
     logger.info("Pandoc finished.", extra={"pandoc_warnings": PANDOC_WARNINGS.count})
@@ -762,14 +769,16 @@ def generate_collateral(
         },
     )
     print_unsupported_report(report)
-    documents: dict[str, Path] = {"Resume": Path(expected_docs["resume_file"])}
+    documents: dict[str, Path] = {"Resume": out_dir / expected_docs["resume_file"]}
     if "cover_letter_file" in expected_docs:
-        documents["Cover letter"] = Path(expected_docs["cover_letter_file"])
+        documents["Cover letter"] = out_dir / expected_docs["cover_letter_file"]
+    print(f"Run directory: {out_dir}")
     refused: list[str] = print_page_counts(documents)
     if refused:
         raise RefusedDocumentError(
             f"Refused: {', '.join(refused)}. Do not send them; see the warnings above."
         )
+    return out_dir
 
 
 def parse_args() -> argparse.Namespace:
@@ -833,11 +842,16 @@ def main() -> None:
         logger.error("A generated document was refused.")
         print(f"ERROR: {exc}", file=sys.stderr)
         sys.exit(1)
+    except paths.DataPathRefusedError as exc:
+        logger.error("A data path was refused.")
+        print(f"ERROR: {exc}", file=sys.stderr)
+        sys.exit(paths.EXIT_REFUSED)
 
 
 def _main() -> None:
     """Runs the pipeline for the parsed command line."""
     args: argparse.Namespace = parse_args()
+    paths.validate_all()
 
     if args.master:
         logger.info("Executing Master Resume generation. Bypassing STDIN requisition.")

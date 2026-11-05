@@ -8,6 +8,8 @@ import pytest
 
 from resume_optimizer.adapters import MockLLMAdapter
 
+pytestmark = pytest.mark.usefixtures("stand_in_resources")
+
 
 # Add the patch decorator targeting the pypandoc module INSIDE your generate.py file
 @patch("resume_optimizer.generate.pypandoc.convert_file")
@@ -28,8 +30,8 @@ def test_resume_generation_pipeline_success(
     }
     mock_data_path.write_text(json.dumps(mock_master_data))
 
-    # The pipeline reads its prompt and templates from the working directory (tmp_path under
-    # the autouse fixture in conftest.py), so supply minimal stand-ins rather than repo files.
+    # The pipeline reads its prompt and templates from the package folders, which the
+    # stand_in_resources fixture points at tmp_path, so supply minimal stand-ins.
     (tmp_path / "system_prompt.txt").write_text("system prompt", encoding="utf-8")
     (tmp_path / "resume_template.md").write_text("Resume {{ contact.name }}", encoding="utf-8")
     (tmp_path / "cover_letter_template.md").write_text(

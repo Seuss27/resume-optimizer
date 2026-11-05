@@ -84,12 +84,12 @@ outputs.
 | Thing | Location | Default |
 |---|---|---|
 | Code, schemas, role prompts (package data), Word templates (placeholder text, metadata stripped), synthetic `example_*` ledger | this repo (public) | — |
-| Evidence ledger, corpus, style guide, eval set, import snapshots, gap backlog | private ledger repo (`RO-D2`); local clone at `RO_LEDGER_DIR` | per-user data dir (`platformdirs`) |
-| One run's artifacts; the runs index | `RO_RUNS_DIR/<run-id>/` (random run IDs) | per-user data dir |
+| Evidence ledger, corpus, style guide, eval set, import snapshots, gap backlog | private ledger repo (`RO-D2`); local clone at `RO_LEDGER_DIR` | the `ledger` subdirectory of `platformdirs`' per-user data dir for app `resume-optimizer` |
+| One run's artifacts; the runs index | `RO_RUNS_DIR/<run-id>/` (random run IDs) | the `runs` subdirectory of that same per-user data dir |
 | Exemplars for the legacy path (Phase A only) | `RO_EXEMPLAR_DIR` | unset |
 | Send-ready copies | `RO_SEND_DIR` | unset (files stay in the run dir) |
 | Word template override | `RO_TEMPLATE_DIR` (sanitised and checked by `ro template check`, §3.7) | unset (packaged templates) |
-| Logs | `RO_LOG_DIR` | per-user log dir |
+| Logs | `RO_LOG_DIR` | `platformdirs`' per-user log dir for that app |
 | The Google Sheet | imported tabs frozen at C3, then a read-only mirror after F3 (`RO-D5`, `RO-D11`); the applications tab stays live (`RO-D12`) | — |
 
 `ro` refuses to start if any of these paths resolves inside this repo's working tree. Real
