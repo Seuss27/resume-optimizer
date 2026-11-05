@@ -1,22 +1,24 @@
 # Next steps
 
-**Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `planning`. Task #85 is merged, and no
-next task is anchored.
+**Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `implementing`. Task #39 (plan task
+B6, the `claude -p` runtime spike) has a spec comment and is anchored.
 
 **Just done:**
-- Merged #85 (`5eb50ff`, PR #120): the tracked-path guard now also fails on `.env`,
-  `master_data.json`, `*.csv` (bar the four synthetic root files and `tests/fixtures/`), `*.docx`,
-  `*.pdf`, `*.log` and the generator's report files.
-  - Its critic pass (`architect`, `security-critic`, `docs-consistency`) converged in 2 rounds.
-  - The wording tightenings left unapplied are the "four synthetic root CSV files" count in the
-    guard's docstring, and "the patterns are case-folded" where the path is what is folded.
-- Merged the cursor sync #119.
+- The maintainer picked #39 as the next S02 task. Its result blocks D1.
+- Drafted #39's spec with `/way-of-working:spec-task 39`, against `83526a5`, and posted it as
+  Seuss27 (comment 6662436797; legacy `identities: null`, so the script held it).
+  - Its critic pass (`architect`, `docs-consistency`) converged in 4 rounds. The last round's
+    tightenings were applied before posting.
+- Merged the cursor sync #121.
 
-**Next:** pick the next S02 task with the maintainer (list the milestone's open issues with
-`gh api "repos/Seuss27/resume-optimizer/issues?milestone=2&state=open"`), then draft its spec with
-`/way-of-working:spec-task <N>`. Assigned model: **opus** (architect).
+**Next:** task #39 — build the B6 spike from the spec comment
+https://github.com/Seuss27/resume-optimizer/issues/39#issuecomment-6662436797. The session
+prepares the probe, payloads and commands outside the checkout. The maintainer then runs the live
+measurements by hand from Windows Terminal, with no Claude Code session open, and the session writes
+`docs/spikes/b6-claude-code-runtime.md` and the doc edits from the reported results. Assigned
+model: **sonnet** (coder).
 
-**HITL Gate: NONE OPEN** — next gate: the maintainer picks the next S02 task
+**HITL Gate: NONE OPEN** — next gate: the maintainer runs the live B6 measurements by hand
 
 **Open for the owner (non-blocking):**
 - Still open from #100: a manual run of the `ruleset-drift` workflow, and its last two done-whens (a
