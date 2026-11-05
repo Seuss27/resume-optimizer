@@ -198,12 +198,13 @@ def test_importing_the_modules_sets_up_no_logging(tmp_path: Path) -> None:
         "import logging;"
         "import resume_optimizer.generate, resume_optimizer.build_state;"
         "import resume_optimizer.adapters, resume_optimizer.render;"
+        "import resume_optimizer.credentials, keyring.core;"
+        "assert keyring.core._keyring_backend is None;"
         "assert not logging.getLogger().handlers, logging.getLogger().handlers"
     )
     env: dict[str, str] = {
         "PYTHONPATH": os.pathsep.join(sys.path),
         "SYSTEMROOT": os.environ.get("SYSTEMROOT", ""),
-        "GEMINI_API_KEY": "test-key",
     }
     for name in ("RO_LEDGER_DIR", "RO_RUNS_DIR", "RO_LOG_DIR"):
         env[name] = os.environ[name]

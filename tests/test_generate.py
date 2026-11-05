@@ -3,7 +3,6 @@
 import argparse
 import json
 import logging
-import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -14,10 +13,13 @@ import pytest
 from resume_optimizer import generate
 from resume_optimizer.adapters import MockLLMAdapter
 
-# Ensure the GEMINI_API_KEY check in generate.py passes during import.
-os.environ.setdefault("GEMINI_API_KEY", "test-key")
-
 pytestmark = pytest.mark.usefixtures("stand_in_resources")
+
+
+@pytest.fixture(autouse=True)
+def stored_gemini_key(memory_keyring: Any) -> None:
+    """Stores a stand-in Gemini key in the in-memory keyring, as the old import-time env var did."""
+    memory_keyring.set_password("resume-optimizer", "gemini-api-key", "test-key")
 
 
 def test_clean_filename_normalizes_text() -> None:

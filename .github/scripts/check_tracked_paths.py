@@ -76,7 +76,7 @@ def pattern_hit(path: str) -> str | None:
         return "*.xlsx outside tests/fixtures/"
     last: str = parts[-1]
     if ".env" in parts:
-        return "dotenv file or directory"
+        return "env file or directory"
     if "master_data.json" in parts:
         return "ledger master data file"
     if last.endswith(".csv") and path not in SYNTHETIC_CSVS and not path.startswith(EXEMPT_PREFIX):

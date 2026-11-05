@@ -7,6 +7,7 @@ import types
 from collections.abc import Iterator
 from pathlib import Path
 
+import keyring.backend
 import pytest
 
 REPO_ROOT: Path = Path(__file__).resolve().parent.parent
@@ -101,6 +102,40 @@ def ro_environment(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("RO_LOG_DIR", str(tmp_path / "logs"))
     for name in ("RO_EXEMPLAR_DIR", "RO_SEND_DIR", "RO_TEMPLATE_DIR"):
         monkeypatch.delenv(name, raising=False)
+
+
+class MemoryKeyring(keyring.backend.KeyringBackend):
+    """An in-memory keyring backend, so no test reaches the real OS keyring."""
+
+    priority = 1  # type: ignore[assignment]
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.store: dict[tuple[str, str], str] = {}
+
+    def get_password(self, service: str, username: str) -> str | None:
+        return self.store.get((service, username))
+
+    def set_password(self, service: str, username: str, password: str) -> None:
+        self.store[(service, username)] = password
+
+    def delete_password(self, service: str, username: str) -> None:
+        self.store.pop((service, username), None)
+
+
+@pytest.fixture(autouse=True)
+def memory_keyring(monkeypatch: pytest.MonkeyPatch) -> MemoryKeyring:
+    """Installs an empty in-memory keyring and unsets the credential-adjacent variables.
+
+    Patches the private `keyring.core._keyring_backend` attribute (pytest restores it on
+    teardown) and never calls `keyring.get_keyring()`, which would probe the real OS keyring.
+    If a later keyring release removes the attribute, this fails loudly, by design.
+    """
+    backend = MemoryKeyring()
+    monkeypatch.setattr("keyring.core._keyring_backend", backend)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("LLM_PROVIDER", raising=False)
+    return backend
 
 
 @pytest.fixture(autouse=True)
