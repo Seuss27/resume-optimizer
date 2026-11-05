@@ -18,7 +18,7 @@ When you find a job you want to apply for, the engine:
 
 ## Prerequisites
 
-* **Python 3.10+**
+* **Python 3.14+**
 * **Pandoc** (The script will attempt to automatically download the Pandoc engine if it is not found on your system)
 * **Gemini API Key** (Get one at [Google AI Studio](https://aistudio.google.com/))
 
@@ -172,7 +172,7 @@ Contributor conventions (commits, branches, the no-fabrication rules) are in [CL
 resume-optimizer/
 ├── .github/
 │   ├── dependabot.yml       # Dependency tracking configuration
-│   └── workflows/ci.yml     # Automated multi-environment GitHub Actions pipeline
+│   └── workflows/ci.yml     # Automated GitHub Actions pipeline
 ├── src/
 │   └── resume_optimizer/
 │       ├── prompts/         # Packaged prompts

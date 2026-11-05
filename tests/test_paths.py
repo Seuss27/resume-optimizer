@@ -110,7 +110,7 @@ def test_a_symlink_into_a_checkout_is_refused(
     link: Path = tmp_path / "link"
     try:
         link.symlink_to(checkout, target_is_directory=True)
-    except (OSError, NotImplementedError):
+    except OSError, NotImplementedError:
         pytest.skip("this OS refused to create a symlink")
     monkeypatch.setenv("RO_RUNS_DIR", str(link / "runs"))
     with pytest.raises(paths.DataPathRefusedError):

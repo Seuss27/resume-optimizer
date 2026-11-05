@@ -22,7 +22,7 @@ def load_profile(profile_csv_path: str | Path) -> dict[str, Any]:
     df_profile: pd.DataFrame = pd.read_csv(csv_path)
 
     # Convert it into a standard Python dictionary mapping Keys to Values
-    profile_dict: dict[str, Any] = dict(zip(df_profile["Key"], df_profile["Value"]))
+    profile_dict: dict[str, Any] = dict(zip(df_profile["Key"], df_profile["Value"], strict=True))
 
     return profile_dict
 

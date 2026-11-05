@@ -522,50 +522,28 @@ def test_generate_collateral_uses_unknown_prefix_when_metadata_is_missing(
 def test_evaluate_desirability_requests_prompt_and_returns_json(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Ensures evaluate desirability triggers the correct prompt and returns parsed results."""
+    """Ensures evaluate desirability goes through the engine with the right prompt."""
     monkeypatch.chdir(tmp_path)
     (tmp_path / "desirability_prompt.txt").write_text("Desirability prompt rules", encoding="utf-8")
 
-    captured: dict[str, Any] = {}
-
-    class FakeResponse:
-        """Mock for Gemini API response."""
-
-        def __init__(self, text: str) -> None:
-            self.text: str = text
-
-    class FakeModels:
-        """Mock for Gemini models module."""
-
-        def generate_content(self, model: str, contents: str, config: Any) -> FakeResponse:
-            captured["config"] = config
-            return FakeResponse(
-                json.dumps(
-                    {
-                        "desirability_score": 85,
-                        "salary_match": "Exceeds minimum",
-                        "remote_match": "Fully remote match",
-                        "benefits_analysis": "Includes target matching 401k",
-                        "pros": ["Good pay"],
-                        "cons": ["Unknown PTO limitations"],
-                    }
-                )
-            )
-
-    class FakeClient:
-        """Mock for Gemini API Client."""
-
-        def __init__(self, http_options: Any = None) -> None:
-            self.models: FakeModels = FakeModels()
-
-    monkeypatch.setattr(generate, "genai", type("DummyGenai", (), {"Client": FakeClient}))
+    payload: dict[str, Any] = {
+        "desirability_score": 85,
+        "salary_match": "Exceeds minimum",
+        "remote_match": "Fully remote match",
+        "benefits_analysis": "Includes target matching 401k",
+        "pros": ["Good pay"],
+        "cons": ["Unknown PTO limitations"],
+    }
+    engine = MockLLMAdapter(mock_responses=[payload])
 
     prefs: dict[str, str] = {"Pref_Min_Salary": "160000"}
-    result: dict[str, Any] = generate.evaluate_desirability("Looking for architect role", prefs)
+    result: dict[str, Any] = generate.evaluate_desirability(
+        "Looking for architect role", prefs, engine
+    )
 
     assert result["desirability_score"] == 85
     assert result["salary_match"] == "Exceeds minimum"
-    assert captured["config"].system_instruction == "Desirability prompt rules"
+    assert engine.call_history[0]["system_instruction"] == "Desirability prompt rules"
 
 
 def test_generate_collateral_saves_desirability_report_when_flag_set(
@@ -612,14 +590,11 @@ def test_generate_collateral_saves_desirability_report_when_flag_set(
         "cons": [],
     }
 
-    # 4. Inject MockLLMAdapter for the resume generation step
-    mock_adapter = MockLLMAdapter(mock_responses=[expected_resume_payload])
-    monkeypatch.setattr("resume_optimizer.generate.get_llm_engine", lambda: mock_adapter)
-
-    # 5. Patch evaluate_desirability directly to return our controlled mock payload
-    monkeypatch.setattr(
-        generate, "evaluate_desirability", lambda job_req, prefs: expected_desirability_payload
+    # 4. One engine serves both calls: resume generation first, desirability second
+    mock_adapter = MockLLMAdapter(
+        mock_responses=[expected_resume_payload, expected_desirability_payload]
     )
+    monkeypatch.setattr("resume_optimizer.generate.get_llm_engine", lambda: mock_adapter)
 
     monkeypatch.setattr(generate.pypandoc, "get_pandoc_version", mock_get_pandoc_version)
     monkeypatch.setattr(generate.pypandoc, "convert_file", mock_convert_file)
@@ -633,6 +608,11 @@ def test_generate_collateral_saves_desirability_report_when_flag_set(
     expected_report: Path = run_dir / "Stark_Industries_Security_Lead_desirability_AT.txt"
     assert expected_report.exists()
     assert "Score: 95/100" in expected_report.read_text(encoding="utf-8")
+
+    # The desirability call went through the same engine, with the preferences in its prompt
+    desirability_call: dict[str, Any] = mock_adapter.call_history[1]
+    assert desirability_call["system_instruction"] == "Desirability core rule"
+    assert "Pref_Min_Salary" in desirability_call["prompt"]
 
 
 def test_generate_collateral_master_mode_skips_cover_letter_and_validations(
@@ -1122,7 +1102,9 @@ def test_no_log_record_carries_a_resolved_path(
         "pros": [],
         "cons": [],
     }
-    monkeypatch.setattr(generate, "evaluate_desirability", lambda job_req, prefs: desirability)
+    monkeypatch.setattr(
+        generate, "evaluate_desirability", lambda job_req, prefs, engine: desirability
+    )
 
     with caplog.at_level(logging.INFO):
         generate.generate_collateral(
