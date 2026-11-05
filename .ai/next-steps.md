@@ -1,20 +1,28 @@
 # Next steps
 
-**Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `implementing`. Task #85 is next in the
-milestone's build order and is anchored; it has no spec yet.
+**Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `implementing`. Task #85 (extend the
+tracked-path guard) is anchored, and its spec is posted and approved.
 
 **Just done:**
-- Built B4 (#37) and merged it as PR #105 (`025e386`).
-- Critic pass on B4 (`architect`, `security-critic`, `docs-consistency`): 1 round, converged,
-  tightenings only. No second-opinion round was configured.
-- Reviewed Dependabot PR #101 (ruff `0.17.3`): `ruff check` and `ruff format --check` pass on `main`
-  and on B4 under `0.17.3`; its CI is green.
+- Drafted and posted the #85 spec:
+  https://github.com/Seuss27/resume-optimizer/issues/85#issuecomment-6660211167, pinned to `e82d717`.
+  The maintainer reacted to it.
+- Spec critic gate (`architect`, `security-critic`): 3 rounds, converged. No second-opinion round was
+  configured.
+  - Round 1's blocker: the proposed pattern names contained the test file names, so the
+    "no file name in stdout" assertion would fail.
+  - Round 2 fixed a plan citation (§3.1, not §2).
+- The spec makes these scope choices:
+  - The synthetic-CSV exemption is an exact set of four files.
+  - `.env` and `master_data.json` match any path element.
+  - Word templates get no `.docx` exemption yet: the task that first commits one adds an exact-path
+    exemption.
 
-**Next:** task #85 — draft its spec with `/way-of-working:spec-task 85`, then build it. Assigned
-model: **opus** (architect) for the spec. A held spec comment is posted to the issue as Seuss27, and
-a fresh sonnet (coder) session builds it after the maintainer reacts.
+**Next:** task #85 — build the guard extension exactly as the spec comment above says, on branch
+`feat/85-guard-personal-data`. Run the green gate, `/way-of-working:critic-gate` and
+`/way-of-working:ship`. Do it in a fresh session. Assigned model: **sonnet** (coder).
 
-**HITL Gate: NONE OPEN** — next gate: the maintainer reviews the #85 spec
+**HITL Gate: NONE OPEN** — next gate: the maintainer reviews and merges the #85 PR
 
 **Open for the owner (non-blocking):**
 - Still open from #100: a manual run of the `ruleset-drift` workflow, and its last two done-whens (a
@@ -22,10 +30,13 @@ a fresh sonnet (coder) session builds it after the maintainer reacts.
 - The Sheet CSV export in #34 (on S03), which blocks C3.
 - The `depends_on` markers on #52, #53, #54 (S06) and #55 (S07) name issues in other milestones, so
   `plan-depends.sh` reads each as waiting on every earlier item. Worth its own backlog issue.
-- Decide whether to delete or salvage the local branch `docs/sync-cursor-s02-b2-spec`.
-- Dependabot PR #101 bumps ruff to `0.17.3` in `pyproject.toml` only. `.pre-commit-config.yaml` stays
-  pinned at `v0.15.20` (its ecosystem is not in `.github/dependabot.yml`), so the two would disagree
-  after the merge. Still unconfirmed: `pre-commit run --all-files` with either version.
+- Decide whether to delete or salvage the local branch `docs/sync-cursor-s02-b2-spec`. Its tip has
+  commits that no merged PR carries.
+- Ruff and pre-commit now disagree on the ruff version:
+  - Dependabot PR #101 merged ruff `0.17.3` into `pyproject.toml`.
+  - `.pre-commit-config.yaml` still pins `v0.15.20`, because its ecosystem is not in
+    `.github/dependabot.yml`.
+  - `pre-commit run --all-files` is still unconfirmed with either version.
 - A decision entry in `docs/decisions.md` for the Betterleaks switch is optional.
 - The org's consumer-workflow lint (`check-consumer-workflows.sh`) reports the review gate and the
   devcontainer-image caller missing. The review gate is #88.
@@ -34,10 +45,15 @@ a fresh sonnet (coder) session builds it after the maintainer reacts.
   move (#68) makes one available.
 - Nothing checks that the `ruleset` and `rulesets` blocks in `.ai/project.yml` agree with each
   other. Worth a backlog issue.
-- B4 leaves exception tracebacks, third-party WARNING-and-above text and uncaught-exception stderr
-  output unscrubbed, by design. The bug template warns about the first two. Accepted tightenings from
-  its critic pass: no symlink check on the log file, a half-detached handler pair is not repaired,
-  and the docstring and template say "WARNING" where the filter passes WARNING and above.
+- B4 leaves some output unscrubbed, by design:
+  - exception tracebacks
+  - third-party text at WARNING and above
+  - uncaught-exception stderr output
+
+  The bug template warns about the first two. These tightenings from B4's critic pass were accepted:
+  - no symlink check on the log file
+  - a half-detached handler pair is not repaired
+  - the docstring and template say "WARNING" where the filter passes WARNING and above
 - #76 (decide whether the JSON formatter writes extra fields) is answered by B4's allowlist. The
   maintainer can close it or say what is left.
 
