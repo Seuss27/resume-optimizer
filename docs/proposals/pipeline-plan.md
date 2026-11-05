@@ -1026,7 +1026,7 @@ issue is the single list of the maintainer's follow-ups.
 | Sprint (milestone) | Tasks | Delivers |
 |---|---|---|
 | S01 — Stop the data loss, quick wins | F5, A1, A2, A3, B1, maintainer prerequisites | the session protocol, then better output from today's path |
-| S02 — Foundation and de-risk | B2, B3, B8, B4, B5, B6, B7 | packaging, glunk-works CI and security tooling, credentials, the `claude -p` verdict |
+| S02 — Foundation and de-risk | B2, B3, B8, F6, B4, B5, B6, B7 | packaging, glunk-works CI and security tooling, the transfer, credentials, the `claude -p` verdict |
 | S03 — Ledger core | C1a, C1b, C2, C3 | the private ledger, imported |
 | S04 — Grow the ledger | C4a, C5a, C6, A4 | the legacy path reads a grown ledger |
 | S05 — Engine runtime and checks | D1 (absorbs #8), D2, D3 | role runtime and claim policy |
@@ -1034,7 +1034,7 @@ issue is the single list of the maintainer's follow-ups.
 | S07 — Render and MVP | D5, D6 (absorbs #21) | first `ro tailor` output |
 | S08 — Interview and control | D7, D8, D9 | interview, variants, redraft, verify |
 | S09 — Quality and speed | E1, E2, E3 | runs stats, base drafts, eval |
-| S10 — Hygiene and cutover | F3, F4, F6 | the mirror, retiring the legacy path, the transfer |
+| S10 — Hygiene and cutover | F3, F4 | the mirror, retiring the legacy path |
 
 The maintainer prerequisites issue in S01 covers:
 
@@ -1047,7 +1047,7 @@ The maintainer prerequisites issue in S01 covers:
 
 - **Phase A:** A1 first, then A2 and A3 in parallel, then A4.
 - **B and C1a/C1b:** B1–B5 and B7 run in parallel with C1a. B8 needs B3. C1b needs C1a and
-  B5. B6 precedes D1.
+  B5. B6 precedes D1. F6 follows B8.
 - **C:** C2 needs C1b. C3 and C4a follow C2. C5a needs C3. C6 needs C5a, so the legacy path
   gains the grown ledger before Phase D. C4b needs D1, and C5b needs C4b.
 - **D:** D2 needs D1. D3 needs D2. D4 needs D1 and C4a. D5 comes after C1a and D2–D4. Then
