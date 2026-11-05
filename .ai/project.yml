@@ -82,9 +82,12 @@ review:
 agents:
   enabled: [architect, coder, security-critic, docs-consistency]
   # Rule-selected, no pick-list: architect and security-critic for code_paths and for the extra
-  # prefixes below (tracked paths that can carry rule-4 content, and the agent instructions),
-  # docs-consistency for .md files and load_bearing_docs. Interim until the review CI gate (#88).
-  diff_rule: [docs/, .ai/, CLAUDE.md, readme.md, example_, dummy_gemini_output.json]
+  # prefixes below (tracked paths that can carry rule-4 content, and the agent instructions);
+  # docs-consistency for .md files and load_bearing_docs. The cursor ledger .ai/next-steps.md is
+  # left out on purpose and gets docs-consistency only (CLAUDE.md, critic table). A new tracked
+  # path under .ai/ must be added below, or it gets no architect or security-critic. Interim until
+  # the review CI gate (#88).
+  diff_rule: [docs/, .ai/parked/, .ai/context/, CLAUDE.md, readme.md, example_, dummy_gemini_output.json]
 models:
   architect: opus
   coder: sonnet
