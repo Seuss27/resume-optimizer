@@ -33,7 +33,7 @@ Repository = "https://github.com/Seuss27/resume-optimizer"
 [project.optional-dependencies]
 dev = [
     "pytest==9.2.0",
-    "ruff==0.15.20",
+    "ruff==0.17.3",
     "pip-audit==2.10.1",
     "cyclonedx-bom==8.0.1",
     "zizmor==1.32.0",
