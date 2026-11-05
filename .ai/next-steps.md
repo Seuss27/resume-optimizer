@@ -4,19 +4,19 @@
 tracked-path guard) is anchored, and its spec is posted and approved.
 
 **Just done:**
-- Drafted and posted the #85 spec:
+- Posted the #85 spec, and the maintainer reacted to it:
   https://github.com/Seuss27/resume-optimizer/issues/85#issuecomment-6660211167, pinned to `e82d717`.
-  The maintainer reacted to it.
-- Spec critic gate (`architect`, `security-critic`): 3 rounds, converged. No second-opinion round was
-  configured.
-  - Round 1's blocker: the proposed pattern names contained the test file names, so the
-    "no file name in stdout" assertion would fail.
-  - Round 2 fixed a plan citation (§3.1, not §2).
-- The spec makes these scope choices:
-  - The synthetic-CSV exemption is an exact set of four files.
-  - `.env` and `master_data.json` match any path element.
-  - Word templates get no `.docx` exemption yet: the task that first commits one adds an exact-path
-    exemption.
+  - Its critic gate (`architect`, `security-critic`) converged in 3 rounds.
+  - Its scope choices are in the comment itself.
+- Merged the ruff pin fixes:
+  - #109 (`8b33af3`) pins the pre-commit ruff hook to `v0.17.3`.
+  - #111 (`6cb5e3a`) adds Dependabot's `pre-commit` ecosystem.
+  - The critic passes on both converged: 1 round and 2 rounds.
+- Filed milestone T01 (milestone 11) with seven issues. It covers the move from Hatch to uv
+  (environment, lock, `uv_build`, CI) and the 603-Identity devcontainer. It also covers the rename to
+  resume-orchestrator, whose GitHub-side step runs with the transfer (#68).
+- Filed glunk-works/claude-workbench#1349, which adds this repo to the workbench's identity and
+  dev-container cutover. #115 depends on it.
 
 **Next:** task #85 — build the guard extension exactly as the spec comment above says, on branch
 `feat/85-guard-personal-data`. Run the green gate, `/way-of-working:critic-gate` and
@@ -55,6 +55,13 @@ tracked-path guard) is anchored, and its spec is posted and approved.
   - the docstring and template say "WARNING" where the filter passes WARNING and above
 - #76 (decide whether the JSON formatter writes extra fields) is answered by B4's allowlist. The
   maintainer can close it or say what is left.
+
+- Raise naming uv in the claude-workbench Python conventions, so the glunk-works repos follow
+  (T01's milestone description says this is outside this repo). Place
+  glunk-works/claude-workbench#1349 in that repo's milestones.
+- If `secrets / scan` fails with `couldn't find remote ref refs/pull/<N>/head`, the cause is
+  GitHub, not a secret. GitHub created only the merge ref, and a re-run fails the same way.
+  Pushing a commit to the branch creates the head ref (PR #107).
 
 **Pointers:**
 - the plan: [docs/proposals/pipeline-plan.md](../docs/proposals/pipeline-plan.md)
