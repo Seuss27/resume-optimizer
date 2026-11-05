@@ -3,21 +3,21 @@
 **Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `implementing`.
 
 **Just done:**
-- Built task #35 (B2, paths and packaging) from its spec comment on branch
-  `feat/35-paths-and-packaging`: `paths.py` (the §3.1 resolvers and the in-repo refusal, exit
-  status 3), `resources.py` (prompts and templates as package data), root-anchored ignores, the
-  tracked-path guard and the wheel smoke as steps of the required CI job. The local green gate
-  passes, and a wheel built here ran the mock pipeline from another directory.
-- The guard covers only the new patterns. Extending it to the older personal ones is #85, filed
-  (milestone 2) as the spec's critic pass required. It depends on #35, so it lands after this PR.
+- Task #35 (B2, paths and packaging) merged as #87. Its guard covers only the new patterns;
+  extending it to the older personal ones is #85, now unblocked and in this milestone.
+- Filed #88 (adopt the architect review CI gate on code paths, depends on #68) and #89 (select
+  critics by rule for code and public paths, the interim; this PR). Pulled the transfer (F6, #68)
+  forward into this milestone, after B8 (the plan change is #90, still open), so the gate uses the Apps installed on
+  `glunk-works`.
 
-**Next:** run `/way-of-working:critic-gate` on the B2 diff, then `/way-of-working:ship`; the
-maintainer merges the B2 PR once CI is green. The next S02 task comes from the milestone after
-that. Model: **sonnet** (coder).
+**Next:** the maintainer merges #90 and this PR. Then draft the spec for #36 (B3, first in the
+milestone's build order after #35) with `/way-of-working:spec-task 36`. Model: **sonnet** (coder).
 
-**HITL Gate: NONE OPEN** — next gate: the maintainer merges the B2 PR
+**HITL Gate: NONE OPEN** — next gate: the maintainer merges #90 and the #89 PR
 
-**Open for the owner (non-blocking):** the Sheet CSV export in #34
+**Open for the owner (non-blocking):** edit the S02 and S10 milestone descriptions to match the
+plan once #90 merges (the transfer moves to S02 after #63; #85, #88 and #89 are not in S02's build
+order yet). The Sheet CSV export in #34
 (on S03), which blocks C3. The `depends_on` markers on #52, #53, #54 (S06) and #55 (S07) name
 issues in other milestones, so `plan-depends.sh` reads each as waiting on every earlier item;
 worth its own backlog issue.

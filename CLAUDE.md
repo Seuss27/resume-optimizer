@@ -16,7 +16,7 @@ This repo follows the `glunk-works` way of working: the `way-of-working` plugin 
 green gate, the ruleset, agents and models. **Session flow:**
 - **Start:** run `/way-of-working:resume`. It rehydrates from `.ai/next-steps.md` and
   `.ai/state.json`, never from memory.
-- **Before a PR:** run `/way-of-working:critic-gate` on any diff touching code paths.
+- **Before a PR:** run `/way-of-working:critic-gate` on every diff.
 - **To open the PR:** run `/way-of-working:ship`.
 - **For a merge verdict:** run `/way-of-working:pr-checks`.
 - **Before switching model or session:** run `/way-of-working:handoff`.
@@ -34,15 +34,16 @@ governs. Every local deviation is listed under *Deviations and known gaps*.
   proofreading, not review.
 - **Run the critic pass before opening the PR.** Critics are separate read-only subagents:
   `architect` checks correctness and invariants, `security-critic` checks trust boundaries and
-  PII, and `docs-consistency` checks prose against ground truth. Propose a set based on what
-  the diff touches, and spawn only the critics the human confirms:
+  PII, and `docs-consistency` checks prose against ground truth. `agents.diff_rule` in
+  `.ai/project.yml` selects the set by rule and `critic-gate` spawns it with no pick-list. The
+  table says what the rule selects and, for its last row, what to name when invoking the gate:
 
-  | Diff touches | Propose |
+  | Diff touches | Critics |
   |---|---|
-  | code paths: `src/`, `tests/`, `.claude/`, `.github/`, `pyproject.toml`, `.gitignore`, `.pre-commit-config.yaml`, and the root `tune_template.py` until D5 removes it | `architect` and/or `security-critic` |
-  | a load-bearing doc (below) | `docs-consistency` |
-  | a newly added doc | `docs-consistency`, plus `security-critic` if it covers credentials, data handling or operations |
-  | `docs/`, `.gitignore`, logging, fixtures, or anything else that could carry personal data | `security-critic` (rule 4) |
+  | anything under `code_paths` in `.ai/project.yml` | `architect` and `security-critic` |
+  | any path under an `agents.diff_rule` entry in `.ai/project.yml`: tracked paths that can carry rule-4 content, and the agent instructions | `architect` and `security-critic` |
+  | any `.md` file, or a load-bearing doc (below) | `docs-consistency` |
+  | a `.md` file outside rows 1–2, or anything else the rule does not select, that could carry personal data (a new doc on credentials, data handling or operations) | `security-critic`, named on the invocation line |
 
   The pass ends when a round returns only tightenings. Never stop on the round that applied
   fixes. After 4 fix-and-re-run rounds, the decision goes back to the human. A plan goes
