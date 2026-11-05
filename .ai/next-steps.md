@@ -3,24 +3,27 @@
 **Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `implementing`.
 
 **Just done:**
-- Built and merged task #36 (B3) as PR #96 (`fc52b95`): Python 3.14 floor, ruff pinned with
-  `E,F,I,B,S`, `evaluate_desirability` routed through the engine, and a boundary test banning
-  `google.genai` outside `adapters.py`. The critic pass (architect, security-critic,
-  docs-consistency) ran 2 rounds and converged; no second-opinion round.
-- Left as optional tightenings from that pass: the boundary scanner misses contrived forms
-  (`adapters.types` attribute access, `import *` from `adapters`, `getattr`). Not yet confirmed:
-  `pre-commit run --all-files` with ruff `v0.15.20`.
+- Drafted the spec comment for task #63 (B8) against `main` at `2e2cc31` with
+  `/way-of-working:spec-task 63`, and posted it on #63 as the maintainer
+  ([comment 6656592152](https://github.com/Seuss27/resume-optimizer/issues/63#issuecomment-6656592152)).
+- The spec-mode critic pass (architect, security-critic, docs-consistency) ran 4 rounds and
+  converged, with no second-opinion round. One optional tightening was left out: a local verbose
+  gitleaks re-run for a fork PR's finding must scan that PR's merge ref.
 
-**Next:** task #63 — draft its spec comment with `/way-of-working:spec-task 63` in a session on
-opus (B8, the next item in milestone 2's build order, its dependency #36 now merged). A
-maintainer reacts to the comment, then a fresh sonnet session builds it. Model: **opus**
-(architect).
+**Next:** task #63 — build B8 from its spec comment (linked above) in its two-commit flow. Ship
+the first commit, stop once the new jobs are green on the PR, and hand back for the maintainer's
+`main-required-checks` swap before the `.ai/project.yml` mirror commit. Model: **sonnet**
+(coder).
 
-**HITL Gate: NONE OPEN** — next gate: the maintainer reacts to the task 63 spec comment
+**HITL Gate: NONE OPEN** — next gate: the maintainer swaps main-required-checks on GitHub before
+the B8 PR merges
 
 **Open for the owner (non-blocking):** the Sheet CSV export in #34 (on S03), which blocks C3. The
 `depends_on` markers on #52, #53, #54 (S06) and #55 (S07) name issues in other milestones, so
 `plan-depends.sh` reads each as waiting on every earlier item; worth its own backlog issue.
+Decide whether to delete or salvage the local branch `docs/sync-cursor-s02-b2-spec`, which resume
+did not prune. Still unconfirmed from B3: `pre-commit run --all-files` with ruff `v0.15.20`; the
+B8 build is a natural place to run it.
 
 **Pointers:**
 - the plan: [docs/proposals/pipeline-plan.md](../docs/proposals/pipeline-plan.md)
