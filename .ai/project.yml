@@ -2,7 +2,7 @@
 # Full key reference: reference/project-schema.md in glunk-works/claude-workbench at the pinned tag.
 # Every value below was read from this repo on 2026-11-05. The ruleset block mirrors a live
 # read-back of `GET /repos/Seuss27/resume-optimizer/rules/branches/main`. The check names are the
-# required jobs' ids.
+# names GitHub reports for the required checks.
 
 # ── identity ─────────────────────────────────────────────────────────────────
 repo: Seuss27/resume-optimizer

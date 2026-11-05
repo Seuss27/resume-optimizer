@@ -6,10 +6,14 @@ RULES_JSON is the response of `GET /repos/{repo}/rules/branches/main`: the rules
 that applies to the branch, tagged by ruleset id. PROJECT_JSON is `.ai/project.yml` as JSON. For
 the `ruleset` block and every entry under `rulesets`, each declared rule type must be among the
 applying rules and each declared required check among the `required_status_checks` contexts.
-Extra checks on GitHub are not drift. The script fails closed on unreadable or wrongly shaped
-input, an empty `rulesets` list, and an empty declared `required_checks` or `rule_types`. Bypass
-actors are not in the branch-rules response, so they are not checked. The `pull_request` rule's
-parameters (approval count, merge methods) are in it, but this check leaves them alone.
+Extra checks on GitHub are not drift. A block may also declare `check_integrations`, a mapping
+from a declared check to the id of the app it must be pinned to (for example 15368, GitHub
+Actions). GitHub must then require that check with that `integration_id`, so a commit status of
+the same name cannot satisfy it. None is declared until `secrets / scan` is required. The script
+fails closed on unreadable or wrongly shaped input, an empty `rulesets` list, and an empty
+declared `required_checks` or `rule_types`. Bypass actors are not in the branch-rules response,
+so they are not checked. The `pull_request` rule's parameters (approval count, merge methods) are
+in it, but this check leaves them alone.
 """
 
 import json
@@ -29,12 +33,12 @@ def _load(path: str) -> Any:
         raise ShapeError(f"cannot read {Path(path).name} as JSON") from exc
 
 
-def applying(rules: Any) -> tuple[set[str], set[str]]:
-    """Returns the rule types and the required check contexts of the applying rules."""
+def applying(rules: Any) -> tuple[set[str], dict[str, set[int | None]]]:
+    """Returns the rule types, and the required check contexts with the app ids they carry."""
     if not isinstance(rules, list):
         raise ShapeError("the branch rules are not a list")
     types: set[str] = set()
-    contexts: set[str] = set()
+    contexts: dict[str, set[int | None]] = {}
     for rule in rules:
         if not isinstance(rule, dict) or not isinstance(rule.get("type"), str):
             raise ShapeError("a branch rule has no type")
@@ -47,7 +51,10 @@ def applying(rules: Any) -> tuple[set[str], set[str]]:
             for check in checks:
                 if not isinstance(check, dict) or not isinstance(check.get("context"), str):
                     raise ShapeError("a required check has no context")
-                contexts.add(check["context"])
+                app: Any = check.get("integration_id")
+                if app is not None and (isinstance(app, bool) or not isinstance(app, int)):
+                    raise ShapeError("a required check has an integration_id that is not a number")
+                contexts.setdefault(check["context"], set()).add(app)
     return types, contexts
 
 
@@ -60,6 +67,19 @@ def _declared(block: Any, label: str, key: str) -> list[str]:
     if not all(isinstance(v, str) and v for v in values):
         raise ShapeError(f"{label} has a {key} entry that is not a string")
     return values
+
+
+def _integrations(block: Any, label: str, declared: list[str]) -> dict[str, int]:
+    """Returns the app ids a block pins its checks to, which may be none."""
+    pins: Any = block.get("check_integrations", {})
+    if not isinstance(pins, dict):
+        raise ShapeError(f"{label} has a check_integrations that is not a mapping")
+    for context, app in pins.items():
+        if context not in declared:
+            raise ShapeError(f"{label} pins a check that is not in its required_checks")
+        if isinstance(app, bool) or not isinstance(app, int) or app <= 0:
+            raise ShapeError(f"{label} pins a check to an id that is not a positive number")
+    return pins
 
 
 def check(rules: Any, project: Any) -> list[str]:
@@ -77,9 +97,13 @@ def check(rules: Any, project: Any) -> list[str]:
         for rule_type in _declared(block, label, "rule_types"):
             if rule_type not in types:
                 problems.append(f"{label}: missing rule type {rule_type}")
-        for context in _declared(block, label, "required_checks"):
+        declared: list[str] = _declared(block, label, "required_checks")
+        for context in declared:
             if context not in contexts:
                 problems.append(f"{label}: missing required check {context}")
+        for context, app in _integrations(block, label, declared).items():
+            if context in contexts and app not in contexts[context]:
+                problems.append(f"{label}: required check {context} is not pinned to app {app}")
     return problems
 
 

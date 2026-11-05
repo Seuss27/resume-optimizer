@@ -90,6 +90,52 @@ def test_missing_items_are_found_in_the_ruleset_block_alone() -> None:
     assert not any(p.startswith("rulesets[") for p in problems)
 
 
+def _pinned_rules(app: int | None) -> list[dict[str, Any]]:
+    rules = _rules(CHECKS)
+    for rule in rules:
+        if rule["type"] == "required_status_checks":
+            checks = rule["parameters"]["required_status_checks"]
+            checks[0]["integration_id"] = app
+    return rules
+
+
+def _pinned_project(app: Any) -> dict[str, Any]:
+    project = copy.deepcopy(PROJECT)
+    project["rulesets"][0]["check_integrations"] = {"lint": app}
+    return project
+
+
+def test_a_matching_integration_id_passes() -> None:
+    assert check_ruleset.check(_pinned_rules(15368), _pinned_project(15368)) == []
+
+
+@pytest.mark.parametrize("app", [None, 99])
+def test_a_missing_or_different_integration_id_fails(app: int | None) -> None:
+    problems = check_ruleset.check(_pinned_rules(app), _pinned_project(15368))
+    assert any("rulesets[0]: required check lint is not pinned to app 15368" in p for p in problems)
+
+
+def test_an_undeclared_pin_is_not_checked() -> None:
+    assert check_ruleset.check(_pinned_rules(None), PROJECT) == []
+
+
+@pytest.mark.parametrize(
+    "pins", [["lint"], {"nope": 15368}, {"lint": "15368"}, {"lint": True}, {"lint": 0}]
+)
+def test_a_bad_check_integrations_fails_closed(pins: Any) -> None:
+    project = copy.deepcopy(PROJECT)
+    project["rulesets"][0]["check_integrations"] = pins
+    with pytest.raises(check_ruleset.ShapeError):
+        check_ruleset.check(_pinned_rules(15368), project)
+
+
+def test_a_non_numeric_integration_id_on_github_fails_closed() -> None:
+    rules = _pinned_rules(15368)
+    rules[-1]["parameters"]["required_status_checks"][0]["integration_id"] = "15368"
+    with pytest.raises(check_ruleset.ShapeError):
+        check_ruleset.check(rules, PROJECT)
+
+
 def _drop(project: dict[str, Any], *path: str | int) -> dict[str, Any]:
     out = copy.deepcopy(project)
     node: Any = out
