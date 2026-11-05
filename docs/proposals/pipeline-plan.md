@@ -740,7 +740,8 @@ the maintainer approves it. That approval also confirms the RO-D wording.
     - `test-py315` runs pytest on 3.15, `continue-on-error`, advisory only.
     - `dependency-audit` runs `pip-audit`.
     - `sbom` runs `cyclonedx-py` and uploads the result as an artifact.
-    - `secrets-scan` runs gitleaks, with `.gitleaks.toml` extending the defaults.
+    - The secrets scan is not a job in `ci.yml`. It is a caller workflow, `secret-scan.yml`, for the
+      org's reusable Betterleaks scan in `603-Identity/devcontainers`; its check is `secrets / scan`.
     - `zizmor` lints the GitHub Actions workflows.
 
     Every job runs unconditionally, so none can report `skipped`.
@@ -749,8 +750,9 @@ the maintainer approves it. That approval also confirms the RO-D wording.
     through `env:`.
   - **`ruleset-drift` workflow:** a daily scheduled check that `main-required-checks` still
     holds.
-  - **Workflow hygiene:** every action is pinned by commit SHA with a version comment. Each
-    workflow has a top-level `permissions: contents: read` and sets `persist-credentials: false`.
+  - **Workflow hygiene:** every action is pinned by commit SHA with a version comment. A
+    workflow has a top-level `permissions` of at most `contents: read` and sets
+    `persist-credentials: false` on every checkout; the secrets-scan caller has no checkout of its own.
   - **Dependabot:** pip runs daily with a `chore` prefix, and GitHub Actions weekly with a `ci`
     prefix, both with `include: scope`, so every Dependabot PR title passes `pr-title`. The
     rule that ignored major versions is dropped.
@@ -759,13 +761,14 @@ the maintainer approves it. That approval also confirms the RO-D wording.
   - **Ruleset swap, done in the order `conventions.md` § *Prose economy* requires:** the new
     jobs first run on this task's PR. Just before merge, the maintainer's session updates
     `main-required-checks` on GitHub to require `lint`, `test`, `dependency-audit`, `sbom`,
-    `secrets-scan`, `zizmor` and `pr-title`, replacing `build-and-test (3.14)`. The same PR then
-    mirrors that read-back into `.ai/project.yml`.
+    `zizmor` and `pr-title`, replacing `build-and-test (3.14)`. The same PR then mirrors that
+    read-back into `.ai/project.yml`. `secrets / scan` is required in a follow-up, once the
+    caller has merged and reported on a later PR, pinned to `integration_id: 15368`.
 
   *Done when:*
   - every required job above is green on the PR, and `test-py315` reports without blocking
-  - a malformed title fails `pr-title`, and a planted fake secret in a scratch branch fails
-    `secrets-scan`
+  - a malformed title fails `pr-title`, and a planted fake secret in a throwaway repo
+    fails `secrets / scan`
   - `zizmor` reports no findings on the repo's workflows
   - the SBOM is a CI artifact
   - `ruleset-drift.sh` reports no missing checks after the swap

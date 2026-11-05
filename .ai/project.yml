@@ -1,8 +1,8 @@
 # way-of-working plugin contract for this repo (plugin v0.30.0 schema).
 # Full key reference: reference/project-schema.md in glunk-works/claude-workbench at the pinned tag.
-# Every value below was read from this repo on 2026-11-04. The ruleset block mirrors a live
+# Every value below was read from this repo on 2026-11-05. The ruleset block mirrors a live
 # read-back of `GET /repos/Seuss27/resume-optimizer/rules/branches/main`. The check names are the
-# CI matrix job's own names.
+# names GitHub reports for the required checks.
 
 # ── identity ─────────────────────────────────────────────────────────────────
 repo: Seuss27/resume-optimizer
@@ -44,6 +44,9 @@ code_paths:
   - pyproject.toml
   - .gitignore              # the main guard against personal data being committed
   - .pre-commit-config.yaml
+  - betterleaks.toml        # absent on purpose: the org scan reads it, and the ignore file below, from the
+  - .betterleaksignore      # PR's base commit, so a change that silences it needs a critic's look
+  - .gitattributes          # likewise absent: it can hide files from a scan
   - tune_template.py        # stays until D5 removes it
 
 # ── the local green gate ─────────────────────────────────────────────────────
@@ -55,23 +58,30 @@ gates:
     - { run: hatch run format --check }
 
 # ── branch protection ────────────────────────────────────────────────────────
-# `main-required-checks` (ruleset id 26540407), created 2026-11-04, `enforcement: active`, no
-# bypass actors, targeting the default branch. On 2026-11-04 it was narrowed to require only
-# 3.14, ahead of B3 (#36), which drops 3.12 and 3.13 from CI; B8 adds the advisory 3.15 job (`test-py315`).
-# B8 (#63) replaces it with the glunk-works job set (lint, test, dependency-audit, sbom,
-# secrets-scan, zizmor, pr-title). Any new required check goes to GitHub first and is
-# mirrored here second.
+# `main-required-checks` (ruleset id 26540407), `enforcement: active`, no bypass actors (read from
+# `GET /repos/Seuss27/resume-optimizer/rulesets/26540407`), targeting the default branch. Any new
+# required check goes to GitHub first and is mirrored here second.
 ruleset:
   name: main-required-checks
   rule_types: [deletion, non_fast_forward, pull_request, required_status_checks]
   required_checks:
-    - "build-and-test (3.14)"
+    - lint
+    - test
+    - dependency-audit
+    - sbom
+    - zizmor
+    - pr-title
 rulesets:
   - name: main-required-checks
     source: repo
     rule_types: [deletion, non_fast_forward, pull_request, required_status_checks]
     required_checks:
-      - "build-and-test (3.14)"
+      - lint
+      - test
+      - dependency-audit
+      - sbom
+      - zizmor
+      - pr-title
 
 # ── the fresh-session review gate ────────────────────────────────────────────
 review:
