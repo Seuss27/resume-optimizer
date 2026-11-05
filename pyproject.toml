@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling==1.33.0"]
 build-backend = "hatchling.build"
 
 [project]
@@ -15,13 +15,29 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
     "Operating System :: OS Independent",
 ]
-dependencies = ["google-genai", "Jinja2", "pandas", "pypandoc", "python-dotenv", "boto3", "docx2pdf", "pypdf", "platformdirs"]
+dependencies = [
+    "google-genai==2.34.0",
+    "Jinja2==3.1.6",
+    "pandas==3.1.1",
+    "pypandoc==1.17",
+    "python-dotenv==1.2.4",
+    "boto3==1.43.124",
+    "docx2pdf==0.1.8",
+    "pypdf==6.21.4",
+    "platformdirs==4.14.5",
+]
 
 [project.urls]
 Repository = "https://github.com/Seuss27/resume-optimizer"
 
 [project.optional-dependencies]
-dev = ["pytest", "ruff==0.15.20"]
+dev = [
+    "pytest==9.2.0",
+    "ruff==0.15.20",
+    "pip-audit==2.10.1",
+    "cyclonedx-bom==8.0.1",
+    "zizmor==1.32.0",
+]
 
 # Define clean CLI entry points mapping directly to your functions
 [project.scripts]
@@ -59,7 +75,7 @@ line-ending = "auto"
 path = "src/resume_optimizer/generate.py"
 
 [tool.hatch.envs.default]
-dependencies = ["pytest", "ruff==0.15.20"]
+features = ["dev"]
 
 [tool.hatch.envs.default.scripts]
 test = "pytest {args:tests}"

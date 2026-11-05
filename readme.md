@@ -172,7 +172,7 @@ Contributor conventions (commits, branches, the no-fabrication rules) are in [CL
 resume-optimizer/
 ├── .github/
 │   ├── dependabot.yml       # Dependency tracking configuration
-│   └── workflows/ci.yml     # Automated GitHub Actions pipeline
+│   └── workflows/           # GitHub Actions workflows
 ├── src/
 │   └── resume_optimizer/
 │       ├── prompts/         # Packaged prompts

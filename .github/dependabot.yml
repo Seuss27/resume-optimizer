@@ -1,14 +1,16 @@
 version: 2
 updates:
-  # Monitor Python dependencies in requirements.txt
+  # Monitor the pins in pyproject.toml
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "daily"
     open-pull-requests-limit: 5
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: "chore"
+      include: "scope"
 
   # Monitor GitHub Actions in .github/workflows/
   - package-ecosystem: "github-actions"
@@ -16,3 +18,8 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: "ci"
+      include: "scope"

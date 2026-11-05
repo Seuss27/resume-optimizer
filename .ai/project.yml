@@ -44,6 +44,9 @@ code_paths:
   - pyproject.toml
   - .gitignore              # the main guard against personal data being committed
   - .pre-commit-config.yaml
+  - .gitleaks.toml          # the secrets-scan config
+  - .gitleaksignore         # absent on purpose (CI refuses it); listed so a PR that adds it gets critics
+  - .gitattributes          # likewise: CI refuses it, because it can hide files from the secrets scan
   - tune_template.py        # stays until D5 removes it
 
 # ── the local green gate ─────────────────────────────────────────────────────

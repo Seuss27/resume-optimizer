@@ -71,10 +71,10 @@ yet gets its path from the plan task that creates it.
 - `adapters`: LLM runtimes and provider adapters (`adapters.py`, `interfaces.py`)
 - `roles`: role prompts and schemas in `src/resume_optimizer/roles/`
 - `cli`: the `ro` and `generate-resume` entry points (`generate.py` currently spans `cli` and `render`)
-- `ci`: `.github/`, `.pre-commit-config.yaml`
+- `ci`: `.github/`, `.pre-commit-config.yaml`, `.gitleaks.toml`
 
 Any other path takes the area of the change it belongs to. A change that spans areas takes the
-area of its main purpose, or omits the scope. The `deps` scope is exempt.
+area of its main purpose, or omits the scope. The `deps` scope, and Dependabot's `deps-dev`, are exempt.
 
 Labels sit on three axes: `type/{bug,feature,chore,docs}`, `area/*` and
 `status/{blocked,needs-human}`. Issue titles are plain imperatives. Any label the pipeline
@@ -136,10 +136,9 @@ hatch run lint                 # ruff check .
 hatch run format --check       # ruff format --check
 ```
 
-`.github/workflows/ci.yml` runs the equivalent checks, plus the tracked-path guard and the
-wheel smoke, and it is the gate of record. The
-`main-required-checks` ruleset requires it, and `.ai/project.yml` mirrors that ruleset. B8
-aligns the CI and security jobs with the glunk-works repos.
+CI on the PR is the gate of record: the checks GitHub runs on the PR. They cover the local
+gate, plus checks it does not run, the tracked-path guard and wheel smoke among them. The
+required checks are set by the `main-required-checks` ruleset, which `.ai/project.yml` mirrors.
 
 `tests/conftest.py` runs every test in its own `tmp_path` and fails the run if any file under
 the repo root is added, removed or modified.
@@ -151,13 +150,12 @@ repo rather than suppressing the rule.
 
 | Item | Removed by |
 |---|---|
-| No advisory Python 3.15 CI job yet | B8 |
 | Credentials from `.env` / plain env vars, not the keyring — vs conventions | B5 |
 | Importing `generate.py` runs `load_dotenv()`, which reads the root `.env` (credentials, `LLM_PROVIDER`) into the test process — vs the rule that tests never read the repo root | B5 |
-| Unpinned dependencies other than ruff; no SBOM, dependency audit, secrets scan, workflow lint or PR-title check — vs conventions and the glunk-works repos | B8 |
 | The working directory (the checkout root under the readme's Hatch flow) still receives the log file and `tune_template.py`'s outputs, and still supplies the pandoc reference document and `tune_template.py`'s tracked input — vs this file | B4 moves the log file to `RO_LOG_DIR`, D5 removes `tune_template.py`, F4 the legacy path that reads the reference document. The CSVs and `master_data.json` now live in `RO_LEDGER_DIR`, and C6 retires them |
 | PRs target `main`, with no `develop` integration branch, as in claude-workbench | permanent (`pr_base: main`) |
 | Branch prefixes cover every commit type, not only `feat\|fix\|chore\|docs` | permanent |
+| `pr-title` rejects the `!` breaking-change marker that `conventions.md` allows | permanent |
 | No `sprint/NN-slug` branches: one `<type>/<issue#>-<slug>` branch per issue, with sprints as milestones | permanent; watch `ship` and `archive-sprint` for assumptions about `sprint/` branches |
 | The legacy generator sends career data to the provider `LLM_PROVIDER` selects (Gemini by default), before `RO-D13`'s allowlist exists; the generation and ATS calls carry no contact block, but `--score-job` still sends the `Pref_*` preferences, to the provider `LLM_PROVIDER` selects like the other calls | F4 retires the path |
 

@@ -1,58 +1,224 @@
-name: CI Pipeline - Lint & Security
+name: CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
+
+permissions:
+  contents: read
 
 jobs:
-  build-and-test:
+  lint:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: true
-      matrix:
-        python-version: ["3.14"]
-
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v7
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v7
-      with:
-        python-version: ${{ matrix.python-version }}
-        cache: 'pip'
+      - name: Set up Python 3.14
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+          cache: pip
 
-    - name: Install Project & Dev Dependencies
-      run: |
-        python -m pip install --upgrade pip
-        # Installs the local package in editable mode along with your dev tools
-        pip install -e .[dev]
+      - name: Install project and dev dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
 
-    - name: Run Test Suite
-      run: |
-        python -m pytest -q
+      - name: Ruff check
+        run: ruff check .
 
-    - name: Run Ruff Format Check
-      run: |
-        # Verifies formatting compliance without modifying code
-        ruff format --check .
+      - name: Ruff format check
+        run: ruff format --check .
 
-    - name: Run Ruff Linter & Security Scan (Bandit rules)
-      run: |
-        # Runs linting, import checks, and full security scans seamlessly
-        ruff check .
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-    - name: Check Tracked Paths
-      run: |
-        python .github/scripts/check_tracked_paths.py
+      - name: Set up Python 3.14
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+          cache: pip
 
-    - name: Wheel Smoke Test
-      run: |
-        python -m pip wheel . --no-deps -w "$RUNNER_TEMP/wheel"
-        python -m venv "$RUNNER_TEMP/smoke-venv"
-        "$RUNNER_TEMP/smoke-venv/bin/python" -m pip install "$RUNNER_TEMP"/wheel/*.whl
-        mkdir "$RUNNER_TEMP/elsewhere"
-        cd "$RUNNER_TEMP/elsewhere"
-        "$RUNNER_TEMP/smoke-venv/bin/python" -I "$GITHUB_WORKSPACE/.github/scripts/wheel_smoke.py" "$RUNNER_TEMP"/wheel/*.whl
+      - name: Install project and dev dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run test suite
+        run: python -m pytest -q
+
+      - name: Check tracked paths
+        run: python .github/scripts/check_tracked_paths.py
+
+      - name: Wheel smoke test
+        run: |
+          python -m pip wheel . --no-deps -w "$RUNNER_TEMP/wheel"
+          python -m venv "$RUNNER_TEMP/smoke-venv"
+          "$RUNNER_TEMP/smoke-venv/bin/python" -m pip install "$RUNNER_TEMP"/wheel/*.whl
+          mkdir "$RUNNER_TEMP/elsewhere"
+          cd "$RUNNER_TEMP/elsewhere"
+          "$RUNNER_TEMP/smoke-venv/bin/python" -I "$GITHUB_WORKSPACE/.github/scripts/wheel_smoke.py" "$RUNNER_TEMP"/wheel/*.whl
+
+  # Advisory: dependencies may not publish 3.15 wheels yet, so this job may stay red.
+  test-py315:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python 3.15
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.15"
+          allow-prereleases: true
+          cache: pip
+
+      - name: Install project and dev dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run test suite
+        run: python -m pytest -q
+
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python 3.14
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+
+      - name: Install the project into a fresh environment
+        run: |
+          python -m venv "$RUNNER_TEMP/audit-venv"
+          "$RUNNER_TEMP/audit-venv/bin/python" -m pip install --upgrade pip
+          "$RUNNER_TEMP/audit-venv/bin/pip" install -e ".[dev]"
+
+      - name: Audit the installed dependencies
+        run: '"$RUNNER_TEMP/audit-venv/bin/pip-audit" --skip-editable'
+
+  sbom:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python 3.14
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+
+      - name: Install the project into a fresh environment
+        run: |
+          python -m venv "$RUNNER_TEMP/sbom-venv"
+          "$RUNNER_TEMP/sbom-venv/bin/python" -m pip install --upgrade pip
+          "$RUNNER_TEMP/sbom-venv/bin/pip" install -e ".[dev]"
+
+      - name: Generate the SBOM
+        run: |
+          "$RUNNER_TEMP/sbom-venv/bin/cyclonedx-py" environment \
+            --of JSON -o "$RUNNER_TEMP/sbom.cdx.json" "$RUNNER_TEMP/sbom-venv/bin/python"
+
+      - name: Upload the SBOM
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sbom
+          path: ${{ runner.temp }}/sbom.cdx.json
+          if-no-files-found: error
+          retention-days: 7
+
+  secrets-scan:
+    runs-on: ubuntu-latest
+    env:
+      GITLEAKS_VERSION: "8.30.1"
+      # SHA-256 of the linux_x64 tarball of that release. Dependabot does not bump this
+      # download: update the version and the hash together, by hand.
+      GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+    steps:
+      - name: Checkout the full history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install gitleaks
+        run: |
+          curl --fail --silent --show-error --location \
+            --output "$RUNNER_TEMP/gitleaks.tar.gz" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/gitleaks.tar.gz" | sha256sum --check --strict -
+          mkdir "$RUNNER_TEMP/gitleaks"
+          tar -xzf "$RUNNER_TEMP/gitleaks.tar.gz" -C "$RUNNER_TEMP/gitleaks" gitleaks
+
+      # A PR's own tree can silence the scan: gitleaks reads a .gitleaksignore from it, and git
+      # applies a tracked .gitattributes (for example `* -diff`) to every commit it prints, which
+      # hides the patch from gitleaks as binary. Refuse both files. .gitleaks.toml adds no allowlist of
+      # its own on purpose, but CI does not enforce that; a change to it is covered only by the
+      # critics that code_paths selects.
+      - name: Refuse files that silence the scan
+        run: |
+          if [ -e .gitleaksignore ]; then
+            echo "A .gitleaksignore silences the secrets scan; remove it." >&2
+            exit 1
+          fi
+          if [ -n "$(find . -name .gitattributes -not -path './.git/*' -print -quit)" ]; then
+            echo "A .gitattributes can hide files from the secrets scan; remove it." >&2
+            exit 1
+          fi
+
+      # --ignore-gitleaks-allow stops an inline gitleaks:allow in a PR's own diff from silencing
+      # a finding. --diff-merges=first-parent makes git print merge commits' diffs, which plain
+      # `git log -p` omits, so a secret added only in a conflict resolution is scanned. A file
+      # git treats as binary (a NUL byte) is still skipped; that is a gitleaks limitation.
+      # Redacted and not verbose: a verbose record prints the file path, the author and the email,
+      # and this public repo's CI log must not carry those (CLAUDE.md rule 4). Without
+      # --log-opts, v8 scans every fetched ref, not only HEAD's history.
+      - name: Scan the history of HEAD
+        run: >
+          "$RUNNER_TEMP/gitleaks/gitleaks" git
+          --log-opts="--diff-merges=first-parent HEAD" --redact --no-banner --ignore-gitleaks-allow --exit-code 1
+          --config .gitleaks.toml .
+
+  zizmor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python 3.14
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+
+      - name: Install the pinned dev dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ".[dev]"
+
+      - name: Lint the workflows and the Dependabot config
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: zizmor .github
