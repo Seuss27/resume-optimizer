@@ -5,8 +5,8 @@ and sits in PR #99, awaiting the maintainer's merge.
 
 **Just done:**
 - Built B8 in PR #99: the CI job set, `pr-title` and `ruleset-drift` workflows with their scripts
-  and tests, exact dependency pins, the Dependabot prefixes. Required checks are the jobs of
-  `ci.yml` and `pr-title`, mirrored in `.ai/project.yml`.
+  and tests, exact dependency pins, the Dependabot prefixes. The maintainer's session swapped
+  `main-required-checks` on GitHub and the PR mirrors the read-back in `.ai/project.yml`.
 - Switched secret scanning from a gitleaks job to the org's Betterleaks caller
   (`secret-scan.yml`, pinned to the `603-Identity/devcontainers` v1.6 commit), after the maintainer
   pointed at that repo's guidance. This departs from the issue text; the plan's B8 entry is updated.
@@ -15,12 +15,12 @@ and sits in PR #99, awaiting the maintainer's merge.
   converged; the Betterleaks switch, 2 rounds, converged; the `integration_id` change, 1 round,
   converged. No second-opinion round was configured.
 
-**Next:** task #63 — merge PR #99, which waits on the maintainer; no further build task is queued.
-Model: **sonnet** (coder). The follow-up below needs the merge first.
+**Next:** the maintainer merges the task #63 PR (#99). The next S02 task is the maintainer's pick
+after that; the follow-up below also waits on the merge. Assigned model: **sonnet** (coder).
 
-**After the merge (maintainer):** add `secrets / scan` to `main-required-checks` with
-`integration_id: 15368` and read the ruleset back, then declare `check_integrations` for it and
-mirror the check in `.ai/project.yml` in a small PR. No issue tracks this yet.
+**After the merge (maintainer):** issue #100 requires `secrets / scan` in `main-required-checks`
+with `integration_id: 15368`, once the caller has merged and reported on a later PR. It reads the
+ruleset back, then mirrors the check and declares `check_integrations` in `.ai/project.yml`.
 
 **HITL Gate: NONE OPEN** — next gate: the maintainer merges PR 99, then requires secrets / scan on main-required-checks
 
