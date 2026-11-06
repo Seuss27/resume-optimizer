@@ -1,0 +1,4 @@
+# GitHub reads this file from a PR's base branch; #88's approval ruleset makes its owner's approval
+# required. List only humans with write access, and keep the `*` line the only rule: a later line
+# would override it for the paths it matches.
+* @Seuss27
