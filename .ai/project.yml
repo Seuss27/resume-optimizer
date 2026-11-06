@@ -1,11 +1,12 @@
 # way-of-working plugin contract for this repo (plugin v0.30.0 schema).
 # Full key reference: reference/project-schema.md in glunk-works/claude-workbench at the pinned tag.
-# Every value below was read from this repo on 2026-11-05. The ruleset block mirrors a live
-# read-back of `GET /repos/Seuss27/resume-optimizer/rules/branches/main`. The check names are the
-# names GitHub reports for the required checks.
+# Every value below was read from this repo on 2026-11-05, and `repo` and the ruleset blocks
+# again on 2026-11-06 after the transfer to glunk-works. Both mirror a live read-back of
+# `GET /repos/glunk-works/resume-orchestrator/rules/branches/main`. The check names are the names
+# GitHub reports for the required checks.
 
 # ── identity ─────────────────────────────────────────────────────────────────
-repo: Seuss27/resume-optimizer
+repo: glunk-works/resume-orchestrator
 pr_base: main
 migration_base: null   # no long-lived integration branch; every PR lands on main.
 
@@ -59,8 +60,8 @@ gates:
 
 # ── branch protection ────────────────────────────────────────────────────────
 # `main-required-checks` (ruleset id 26540407), `enforcement: active`, no bypass actors (read from
-# `GET /repos/Seuss27/resume-optimizer/rulesets/26540407`), targeting the default branch. Any new
-# required check goes to GitHub first and is mirrored here second.
+# `GET /repos/glunk-works/resume-orchestrator/rulesets/26540407`), targeting the default branch.
+# Any new required check goes to GitHub first and is mirrored here second.
 ruleset:
   name: main-required-checks
   rule_types: [deletion, non_fast_forward, pull_request, required_status_checks]
@@ -112,4 +113,4 @@ orchestration: null   # the loop never dispatches into this repo.
 
 # ── declared identities ──────────────────────────────────────────────────────
 identities: null   # not cut over to App identities. Work runs as the maintainer, Seuss27.
-                   # Revisit when the repo moves to glunk-works (F6, #68).
+                   # Revisit with the review gate (#88), now that the repo is in glunk-works.

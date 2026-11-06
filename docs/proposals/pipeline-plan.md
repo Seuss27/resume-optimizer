@@ -489,7 +489,7 @@ The ledger repo's GitHub Actions:
 
 - **Ledger CI** runs on `push` with no secrets and `permissions: contents: read`.
   - Install: dependencies from a hashed lockfile, then
-    `pip install --no-deps git+https://…/resume-optimizer@<sha>`. A SHA bump must be an
+    `pip install --no-deps git+https://…/resume-orchestrator@<sha>`. A SHA bump must be an
     ancestor of this repo's `main`.
   - It fails loudly on `github.event.forced == true`.
 - **The Sheet mirror (F3)** publishes CSVs as a workflow artifact, with no secrets and
@@ -1019,7 +1019,8 @@ the maintainer approves it. That approval also confirms the RO-D wording.
   Pulled forward into S01 at the maintainer's request. *Done when:* the plugin's
   `schema-complete.sh check` prints `complete`, `ruleset-drift.sh` reports no missing types or
   checks, and `/way-of-working:resume` runs in this repo.
-- **F6 — Transfer.** The maintainer transfers the repo to `glunk-works`.
+- **F6 — Transfer.** The maintainer transfers the repo to `glunk-works` and renames it
+  `resume-orchestrator` in the same step (`RO-D19`).
 
 ### Sprints
 

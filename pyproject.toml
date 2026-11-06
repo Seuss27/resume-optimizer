@@ -29,7 +29,7 @@ dependencies = [
 ]
 
 [project.urls]
-Repository = "https://github.com/Seuss27/resume-optimizer"
+Repository = "https://github.com/glunk-works/resume-orchestrator"
 
 [project.optional-dependencies]
 dev = [

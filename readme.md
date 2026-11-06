@@ -39,8 +39,8 @@ This method utilizes [Hatch](https://hatch.pypa.io/) to natively manage virtual 
 2. **Clone the repository and enter the workspace:**
 
    ```bash
-   git clone [https://github.com/Seuss27/resume-optimizer.git](https://github.com/Seuss27/resume-optimizer.git)
-   cd resume-optimizer
+   git clone https://github.com/glunk-works/resume-orchestrator.git
+   cd resume-orchestrator
    ```
 
 3. Everything is ready! Hatch will build and hydrate your environment on your first execution script call.
@@ -52,8 +52,8 @@ If you prefer a standard local virtual environment workflow using standard pytho
 1. **Clone the repository and enter the workspace:**
 
    ```bash
-   git clone [https://github.com/Seuss27/resume-optimizer.git](https://github.com/Seuss27/resume-optimizer.git)
-   cd resume-optimizer
+   git clone https://github.com/glunk-works/resume-orchestrator.git
+   cd resume-orchestrator
    ```
 
 2. **Set up and activate your virtual environment:**
@@ -79,18 +79,34 @@ with the release tag you want.
 1. **Download the release's assets** (needs `gh`, logged in):
 
    ```bash
-   gh release download <tag> --repo Seuss27/resume-optimizer --dir resume-optimizer-release
-   cd resume-optimizer-release
+   gh release download <tag> --repo glunk-works/resume-orchestrator --dir release-<tag>
+   cd release-<tag>
    ```
 
-2. **Verify the wheel's authenticity.** The check is pinned to this repository, to the release
-   workflow and to `main`, because a check against the repository alone would accept an
-   attestation from any workflow on any branch:
+2. **Verify the wheel's authenticity.** For a release cut after the move to `glunk-works`, the
+   check is pinned to this repository, to the release workflow and to `main`, because a check
+   against the repository alone would accept an attestation from any workflow on any branch:
 
    ```bash
-   gh attestation verify ./*.whl --repo Seuss27/resume-optimizer \
-     --signer-workflow Seuss27/resume-optimizer/.github/workflows/release.yml \
+   gh attestation verify ./*.whl --repo glunk-works/resume-orchestrator \
+     --signer-workflow glunk-works/resume-orchestrator/.github/workflows/release.yml \
      --source-ref refs/heads/main
+   ```
+
+   `v0.1.0` was attested before the repository moved to `glunk-works` and took its new name, so
+   its attestation names the old repository and is found under the old owner. The old name can be
+   created again by its owner, so the old-name check alone does not prove where the wheel came
+   from. Also check that the attestation carries this repository's ID, which a new repository
+   cannot have, and that the wheel is the one released:
+
+   ```bash
+   gh attestation verify ./*.whl --owner Seuss27 \
+     --signer-workflow Seuss27/resume-optimizer/.github/workflows/release.yml \
+     --source-ref refs/heads/main --format json \
+     --jq '.[].verificationResult.signature.certificate.sourceRepositoryIdentifier'
+   # must print 1263142580
+   sha256sum resume_optimizer-0.1.0-py3-none-any.whl
+   # must print 2826964d24046b02df7d37199abf49db6824174049fe793bb322dec1198a88c3
    ```
 
 3. **Check integrity** against `SHA256SUMS`. This guards against corruption only, not tampering:
