@@ -12,12 +12,14 @@ next work is the migration to `glunk-works`, which has to land before the archit
 - The maintainer decided the migration is next. It needs no spec comment and runs as Opus
   execution.
 
-**Next:** task #68 — migrate the repo to glunk-works with the rename to resume-orchestrator (#116
-decision, #118 repo rename, #117 package) and adopt the wow-reviewer review gate (#88). Do every
+**Next:** task #68 — migrate the repo to glunk-works with the repo rename to resume-orchestrator
+(#116 decision, #118 repo rename) and adopt the wow-reviewer review gate (#88). Do every
 repo-side change this session can, with no spec comment, and guide the maintainer through each
 GitHub-side step one at a time. Assigned model: **opus** (architect).
-- The plan wants one URL change: #118 says the GitHub rename runs together with the transfer.
+- `RO-D19` wants one URL change: the GitHub rename runs together with the transfer (#118).
 - #116 and #118 sit in milestone T01, and #118 depends on #116. #68 and #88 are in S02.
+- The package rename (#117) is not part of this work: it waits for the uv move (#113), as
+  `RO-D19` records.
 - Adopting `wow-reviewer` means moving `.ai/project.yml` off `identities: null` and
   `review.ci_gate: null`. Find where the identity is defined in `glunk-works/claude-workbench`
   first; do not guess its shape.
