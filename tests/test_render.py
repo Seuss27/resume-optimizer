@@ -14,8 +14,9 @@ def test_docx_to_pdf_falls_back_to_soffice(monkeypatch: pytest.MonkeyPatch, tmp_
     docx = tmp_path / "a.docx"
     docx.write_bytes(b"x")
     calls: list[str] = []
+    monkeypatch.setattr(render, "_ON_WINDOWS", False)
 
-    def fake_run(args: list[str], timeout: int) -> None:
+    def fake_run(args: list[str], timeout: int, pid_file: Path | None = None) -> None:
         calls.append(args[0])
         if any("docx2pdf" in a for a in args):
             raise OSError("no word")
@@ -34,7 +35,7 @@ def test_docx_to_pdf_fails_loudly_without_converters(
     docx = tmp_path / "a.docx"
     docx.write_bytes(b"x")
 
-    def fake_run(args: list[str], timeout: int) -> None:
+    def fake_run(args: list[str], timeout: int, pid_file: Path | None = None) -> None:
         raise OSError("nope")
 
     monkeypatch.setattr(render, "_run", fake_run)

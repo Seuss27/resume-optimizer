@@ -13,6 +13,10 @@ All notable changes to this project are recorded here, in the
 
 ## Unreleased
 
+- The page count no longer closes an open Word, a timed-out converter's process tree is killed
+  (and so is the Word it started, when that Word can be identified), and a LibreOffice found
+  only on PATH is used on Windows.
+
 ## [0.1.0] - 2026-11-05
 
 The first tagged release of the packaged legacy generator.

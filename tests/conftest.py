@@ -182,8 +182,11 @@ def no_real_converters(monkeypatch: pytest.MonkeyPatch) -> None:
 
     shim = types.SimpleNamespace(
         run=refuse,
+        Popen=refuse,
         DEVNULL=subprocess.DEVNULL,
         SubprocessError=subprocess.SubprocessError,
+        TimeoutExpired=subprocess.TimeoutExpired,
+        CalledProcessError=subprocess.CalledProcessError,
     )
     monkeypatch.setattr("resume_optimizer.render.subprocess", shim)
     # Pipeline tests write placeholder files named .docx. The real scan is tested in
