@@ -23,6 +23,7 @@ dependencies = [
     "keyring==25.7.0",
     "boto3==1.43.124",
     "docx2pdf==0.1.8",
+    "pywin32==312; sys_platform == 'win32'",
     "pypdf==6.21.4",
     "platformdirs==4.14.5",
 ]

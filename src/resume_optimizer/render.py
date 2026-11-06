@@ -1,7 +1,7 @@
 """Real page counts for generated Word documents (plan §3.9, task A3).
 
-A `.docx` is converted to PDF by Word (through `docx2pdf`) or, failing that, by
-`soffice --headless`, and `pypdf` counts the pages. If neither converter works this fails
+A `.docx` is converted to PDF by Word or, failing that, by `soffice --headless`, and `pypdf`
+counts the pages (plan §3.9 says which converter runs where). If neither converter works this fails
 loudly. It never estimates a count.
 
 The document is built from model output, so before any converter opens it, it is scanned for
@@ -9,9 +9,11 @@ active content (fields, embedded objects, external targets; plan §3.7). A docum
 is refused, not opened.
 """
 
+import contextlib
 import os
 import re
 import shutil
+import signal
 import subprocess  # noqa: S404 - fixed argument lists only, never a shell
 import sys
 import tempfile
@@ -23,6 +25,11 @@ from resume_optimizer.logging_setup import get_logger
 logger = get_logger(__name__)
 
 CONVERT_TIMEOUT_SECONDS: int = 120
+
+# A module flag, so tests can patch it without patching `os.name`.
+_ON_WINDOWS: bool = os.name == "nt"
+
+_PID_FILE_NAME: str = "word.pid"
 
 # Environment variables a converter needs. Everything else, API keys included, is withheld.
 _ENV_ALLOWLIST: tuple[str, ...] = (
@@ -62,6 +69,12 @@ _SOFFICE_FALLBACKS: tuple[str, ...] = (
 )
 
 
+_TEMP_LEFT_WARNING: str = (
+    "A temporary copy of a document could not be removed. It is in the system temp folder, "
+    "in a folder whose name starts with ro-pagecount-."
+)
+
+
 class PdfConversionError(RuntimeError):
     """No converter could turn the document into a PDF, or the document was refused."""
 
@@ -75,17 +88,82 @@ def _converter_env() -> dict[str, str]:
     return {k: v for k, v in os.environ.items() if k.upper() in _ENV_ALLOWLIST}
 
 
-def _run(args: list[str], timeout: int) -> None:
-    """Runs one converter command, raising on failure or timeout."""
-    subprocess.run(  # noqa: S603 - arguments are a fixed list built from local paths
+def _kill_tree(pid: int, image: str | None = None) -> None:
+    """Kills a process and everything it started. Every failure is suppressed.
+
+    On Windows this runs `taskkill` from `SYSTEMROOT` only (never a PATH lookup), and `image`
+    limits the kill to processes of that image name. On POSIX it kills the process group.
+    """
+    if _ON_WINDOWS:
+        with contextlib.suppress(OSError, subprocess.SubprocessError):
+            root: str = os.environ.get("SYSTEMROOT", "")
+            if not root or not Path(root).is_absolute() or root.startswith(("\\\\", "//")):
+                return  # unset, relative or a network share: never run a binary from there
+            taskkill: Path = Path(root) / "System32" / "taskkill.exe"
+            if not taskkill.exists():
+                return
+            args: list[str] = [str(taskkill), "/PID", str(pid), "/T", "/F"]
+            if image:
+                args += ["/FI", f"IMAGENAME eq {image}"]
+            subprocess.run(  # noqa: S603 - fixed list, an absolute system path, no shell
+                args,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                env=_converter_env(),
+                timeout=10,
+            )
+        return
+    if pid <= 1 or pid == os.getpid():
+        return
+    with contextlib.suppress(OSError):
+        os.killpg(pid, signal.SIGKILL)
+
+
+def _recorded_word_pid(pid_file: Path) -> int | None:
+    """Reads the Word id the converter recorded, only if it is plain digits and plausible."""
+    data: bytes = b""
+    with contextlib.suppress(OSError), pid_file.open("rb") as handle:
+        data = handle.read(16)
+    if not re.fullmatch(rb"[0-9]{1,10}", data):
+        return None
+    pid: int = int(data)
+    return pid if pid > 0 and pid != os.getpid() else None
+
+
+def _run(args: list[str], timeout: int, pid_file: Path | None = None) -> None:
+    """Runs one converter command, raising on failure or timeout.
+
+    On a timeout or any other abort (Ctrl-C included) the converter's whole process tree is
+    killed, and so is the Word this run started, when the converter recorded its id in
+    `pid_file`.
+    """
+    options: dict[str, bool] = {} if _ON_WINDOWS else {"start_new_session": True}
+    child = subprocess.Popen(  # noqa: S603 - arguments are a fixed list built from local paths
         args,
-        check=True,
         stdin=subprocess.DEVNULL,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
-        timeout=timeout,
         env=_converter_env(),
+        **options,
     )
+    try:
+        child.wait(timeout=timeout)
+    except BaseException:
+        # A timeout, Ctrl-C or any other abort. On POSIX the converter has its own session, so
+        # the terminal's interrupt never reaches it. Do not leave it, or its Word, running.
+        _kill_tree(child.pid)
+        if _ON_WINDOWS and pid_file is not None:
+            word_pid: int | None = _recorded_word_pid(pid_file)
+            if word_pid is not None:
+                _kill_tree(word_pid, image="WINWORD.EXE")
+        with contextlib.suppress(OSError, subprocess.SubprocessError):
+            child.kill()
+        with contextlib.suppress(OSError, subprocess.SubprocessError):
+            child.wait(timeout=5)
+        raise
+    if child.returncode != 0:
+        raise subprocess.CalledProcessError(child.returncode, args)
 
 
 def _relationship_kinds(part_text: str) -> set[str]:
@@ -150,10 +228,17 @@ def _soffice_path() -> str | None:
     found: str | None = shutil.which("soffice")
     if not found:
         return None
-    resolved: Path = Path(found).resolve()
+    candidate: Path = Path(found)
+    swapped: bool = _ON_WINDOWS and candidate.suffix.lower() == ".com"
+    if swapped:
+        # PATH resolves `soffice` to the `.com` launcher. Use the `.exe` beside it.
+        candidate = candidate.with_name("soffice.exe")
+    resolved: Path = candidate.resolve()
     if resolved.is_relative_to(Path.cwd().resolve()):
         return None
-    if os.name == "nt" and resolved.suffix.lower() != ".exe":
+    if _ON_WINDOWS and resolved.suffix.lower() != ".exe":
+        return None
+    if swapped and not resolved.is_file():
         return None
     return str(resolved)
 
@@ -177,13 +262,35 @@ def docx_to_pdf(docx_path: Path, out_dir: Path, timeout: int = CONVERT_TIMEOUT_S
     pdf_path: Path = target_dir / f"{source.stem}.pdf"
     failures: list[str] = []
 
+    pid_file: Path = target_dir / _PID_FILE_NAME
+    pid_files: tuple[Path, Path] = (pid_file, pid_file.with_name(f"{_PID_FILE_NAME}.tmp"))
+    if _ON_WINDOWS:
+        label: str = "word"
+        word_args: list[str] = [
+            sys.executable, "-I", "-m", "resume_optimizer.word_pdf",
+            str(source), str(pdf_path), str(pid_file),
+        ]  # fmt: skip
+    else:
+        label = "docx2pdf"
+        word_args = [sys.executable, "-I", "-c", _DOCX2PDF_SNIPPET, str(source), str(pdf_path)]
     try:
-        _run([sys.executable, "-I", "-c", _DOCX2PDF_SNIPPET, str(source), str(pdf_path)], timeout)
+        if _ON_WINDOWS:
+            # A stale id from an earlier run must never be killed.
+            for stale in pid_files:
+                stale.unlink(missing_ok=True)
+            _run(word_args, timeout, pid_file=pid_file)
+        else:
+            _run(word_args, timeout)
         if pdf_path.exists():
             return pdf_path
-        failures.append("docx2pdf produced no file")
+        failures.append(f"{label} produced no file")
     except (OSError, subprocess.SubprocessError) as exc:
-        failures.append(f"docx2pdf: {type(exc).__name__}")
+        failures.append(f"{label}: {type(exc).__name__}")
+    finally:
+        if _ON_WINDOWS:
+            for leftover in pid_files:
+                with contextlib.suppress(OSError):
+                    leftover.unlink(missing_ok=True)
 
     soffice: str | None = _soffice_path()
     if soffice:
@@ -231,7 +338,8 @@ def page_count(docx_path: Path, timeout: int = CONVERT_TIMEOUT_SECONDS) -> int:
     """
     if not docx_path.exists():
         raise PdfConversionError("document not found")
-    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
+    tmp: str = tempfile.mkdtemp(prefix="ro-pagecount-")
+    try:
         # Scan and convert one private copy, so the file that was checked is the file opened,
         # and no lock file or recent-files entry carries the real name.
         copy: Path = Path(tmp) / "document.docx"
@@ -246,3 +354,8 @@ def page_count(docx_path: Path, timeout: int = CONVERT_TIMEOUT_SECONDS) -> int:
             raise DocumentRefusedError(f"refused: document contains {', '.join(active)}")
         pdf_path: Path = docx_to_pdf(copy, Path(tmp), timeout)
         return count_pdf_pages(pdf_path)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+        if Path(tmp).exists():
+            # Fixed text: no path, no document name (CLAUDE.md rule 4).
+            logger.warning(_TEMP_LEFT_WARNING)
