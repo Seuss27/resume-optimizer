@@ -1,24 +1,30 @@
 # Next steps
 
-**Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `implementing`. #80 (replace the
-readme's hand-kept project tree) is picked and its spec is posted.
+**Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `implementing`. #80 is merged. The
+next work is the migration to `glunk-works`, which has to land before the architect review gate
+(#88) can work, because that gate needs the `wow-reviewer` review identity adopted first.
 
 **Just done:**
-- Closed #76 as completed. B4 (PR #105) already answered it: the JSON formatter writes only the
-  `extra=` keys on its allowlist.
-- Checked #80 and confirmed it is still valid in part. The module list is gone from the readme's
-  tree, but the tree still names root and `.github/` files that `git ls-files` can produce.
-- Drafted the #80 spec with `/way-of-working:spec-task` against `b1888b8`. Critic gate
-  (`architect`, `docs-consistency`): 3 rounds, converged. The repo is on `identities: null`, so the
-  spec was held, then posted as Seuss27:
-  https://github.com/Seuss27/resume-optimizer/issues/80#issuecomment-6683758877
+- Built #80 (the readme's project tree became a short layout description plus a pointer to
+  `git ls-files`) and merged it as PR #133 (`f6f5c9b`). Critic gate (`architect`,
+  `security-critic`, `docs-consistency`): 2 rounds, converged. The one fix was a sentence count
+  above the spec's limit.
+- The maintainer decided the migration is next. It needs no spec comment and runs as Opus
+  execution.
 
-**Next:** task #80 — build the readme Project Structure change exactly as the spec comment
-https://github.com/Seuss27/resume-optimizer/issues/80#issuecomment-6683758877 says, run the green
-gate, then `/way-of-working:critic-gate` and `/way-of-working:ship`. Build it in a fresh session,
-because this one read #80's body. Assigned model: **sonnet** (coder).
+**Next:** task #68 — migrate the repo to glunk-works with the rename to resume-orchestrator (#116
+decision, #118 repo rename, #117 package) and adopt the wow-reviewer review gate (#88). Do every
+repo-side change this session can, with no spec comment, and guide the maintainer through each
+GitHub-side step one at a time. Assigned model: **opus** (architect).
+- The plan wants one URL change: #118 says the GitHub rename runs together with the transfer.
+- #116 and #118 sit in milestone T01, and #118 depends on #116. #68 and #88 are in S02.
+- Adopting `wow-reviewer` means moving `.ai/project.yml` off `identities: null` and
+  `review.ci_gate: null`. Find where the identity is defined in `glunk-works/claude-workbench`
+  first; do not guess its shape.
+- The F6 checklist below (release App, secrets, the `release-tag-creation` bypass actor) belongs
+  to this move.
 
-**HITL Gate: OPEN** — first anchor for milestone 2: the maintainer confirms milestone 2 and approves the #80 spec comment, and runs the post-merge Word checks from PR 130
+**HITL Gate: OPEN** — the maintainer confirms the migration plan and the order of their own GitHub-side steps before the Opus session starts the transfer work
 
 **Open for the owner (non-blocking):**
 - F6 (#68) checklist for the release setup: transfer or recreate the release App, reinstall it on
