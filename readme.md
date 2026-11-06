@@ -126,9 +126,8 @@ with the release tag you want.
 The package exposes `generate-resume` and `build-resume-state` today. `ro` arrives with its own
 task. A tool install does not carry everything:
 
-- The generator still reads the pandoc reference document from the working directory, so run it
-  from a directory that holds your own reference document. The CLAUDE.md *Deviations and known
-  gaps* entry on the working directory says why and when that ends.
+- Run the generator from a directory that holds your own reference document, as the note under
+  *Usage* explains.
 - The example CSVs come from the repository, at the same tag.
 - Store your API key with the installed `keyring` command, as in *Configuration & Security* below, using the same
   service and username (`resume-optimizer`, `gemini-api-key`). The missing-key error's own hint
@@ -172,6 +171,10 @@ The steps only. `RO-D18` in [docs/decisions.md](docs/decisions.md) holds the rul
    * Copy `example_experience.csv` into it as `experience.csv`, then populate it with your tabular work history.
 
 ## Usage
+
+> The generator reads the pandoc reference document `resume_reference.docx` from the working
+> directory. The `*.docx` pattern in `.gitignore` keeps it untracked, so supply your own. The
+> CLAUDE.md *Deviations and known gaps* entry on the working directory says when that ends.
 
 Depending on your installation path chosen above, run the preprocessor followed by the core AI engine:
 
@@ -252,19 +255,10 @@ Contributor conventions (commits, branches, the no-fabrication rules) are in [CL
 
 ## Project Structure
 
-```text
-resume-optimizer/
-├── .github/
-│   ├── dependabot.yml       # Dependency tracking configuration
-│   └── workflows/           # GitHub Actions workflows
-├── src/
-│   └── resume_optimizer/
-│       ├── prompts/         # Packaged prompts
-│       └── templates/       # Packaged Jinja2 layouts
-├── tests/                   # Complete unit test suite
-├── resume_reference.docx    # Your MS Word styles document for Pandoc (git-ignored; supply it)
-├── tune_template.py         # Utility script for tuning MS Word outputs locally
-├── dummy_gemini_output.json # Mock AI data payload used by tune_template.py
-├── pyproject.toml           # Declarative tool settings, dependencies, and metadata
-└── .pre-commit-config.yaml  # Local Git compliance commit hook mapping
-```
+The package code lives under `src/resume_optimizer/`, and its prompts and Jinja2 Markdown templates
+ship with it as package data. Tests are under `tests/`; design docs, such as the decisions log
+and the plan, are under `docs/`; and the GitHub workflows, their helper scripts, the Dependabot
+configuration and the issue templates are under `.github/`. The synthetic `example_*` ledger CSVs
+sit at the root, and the Hatch and ruff settings are in `pyproject.toml`. `git ls-files` lists the
+tracked files, and plan §3.1 ([docs/proposals/pipeline-plan.md](docs/proposals/pipeline-plan.md))
+says where the things that are not in this repo live.
