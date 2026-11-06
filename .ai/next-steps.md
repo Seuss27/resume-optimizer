@@ -1,24 +1,24 @@
 # Next steps
 
-**Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `implementing`. #73 (the Word and
-docx2pdf risk on the render path) is built and merged as PR #130 (`853f464`).
+**Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `implementing`. #80 (replace the
+readme's hand-kept project tree) is picked and its spec is posted.
 
 **Just done:**
-- Built #73 and merged it as PR #130.
-  - A new `word_pdf` module replaces `docx2pdf` on Windows. A converter timeout or abort kills the
-    converter's process tree, plus the Word it started when that Word could be identified.
-  - A fixed-text warning reports a temp copy left behind, and the `soffice.com` lookup is fixed.
-  - `pywin32` is pinned for Windows only.
-- Critic gate (`architect`, `security-critic`, `docs-consistency`): 3 rounds, converged. It was not
-  the fresh-session review.
-- The local gate passed on Windows. The Linux-only grandchild-kill test is skipped there, and the
-  same scenario was run against the real `_run` in WSL.
+- Closed #76 as completed. B4 (PR #105) already answered it: the JSON formatter writes only the
+  `extra=` keys on its allowlist.
+- Checked #80 and confirmed it is still valid in part. The module list is gone from the readme's
+  tree, but the tree still names root and `.github/` files that `git ls-files` can produce.
+- Drafted the #80 spec with `/way-of-working:spec-task` against `b1888b8`. Critic gate
+  (`architect`, `docs-consistency`): 3 rounds, converged. The repo is on `identities: null`, so the
+  spec was held, then posted as Seuss27:
+  https://github.com/Seuss27/resume-optimizer/issues/80#issuecomment-6683758877
 
-**Next:** the maintainer picks the next S02 task, then `/way-of-working:spec-task <N>` drafts its
-spec. The three post-merge Word checks are listed in PR #130's body and are still to be run.
-#68 (F6, the transfer) stays with the maintainer. Assigned model: **sonnet** (coder).
+**Next:** task #80 — build the readme Project Structure change exactly as the spec comment
+https://github.com/Seuss27/resume-optimizer/issues/80#issuecomment-6683758877 says, run the green
+gate, then `/way-of-working:critic-gate` and `/way-of-working:ship`. Build it in a fresh session,
+because this one read #80's body. Assigned model: **sonnet** (coder).
 
-**HITL Gate: OPEN** — the maintainer picks the next S02 task, and runs the post-merge Word checks from PR 130
+**HITL Gate: OPEN** — first anchor for milestone 2: the maintainer confirms milestone 2 and approves the #80 spec comment, and runs the post-merge Word checks from PR 130
 
 **Open for the owner (non-blocking):**
 - F6 (#68) checklist for the release setup: transfer or recreate the release App, reinstall it on
@@ -33,8 +33,8 @@ spec. The three post-merge Word checks are listed in PR #130's body and are stil
 - The Sheet CSV export in #34 (on S03), which blocks C3.
 - The `depends_on` markers on #52, #53, #54 (S06) and #55 (S07) name issues in other milestones, so
   `plan-depends.sh` reads each as waiting on every earlier item. Worth its own backlog issue.
-- Decide whether to delete or salvage the local branch `docs/sync-cursor-s02-b2-spec`. Its tip has
-  commits that no merged PR carries.
+- Decide whether to delete or salvage the local branches `docs/sync-cursor-s02-b2-spec` and
+  `fix/73-converter-safety`. Each tip has commits that no merged PR carries.
 - The ruff version is pinned twice, in `pyproject.toml` and `.pre-commit-config.yaml`.
   Dependabot bumps each through a different ecosystem (#110), so a ruff bump arrives as two PRs:
   merge them together. A check that compares the pins is a possible follow-up. Check the first
@@ -56,9 +56,6 @@ spec. The three post-merge Word checks are listed in PR #130's body and are stil
   - no symlink check on the log file
   - a half-detached handler pair is not repaired
   - the docstring and template say "WARNING" where the filter passes WARNING and above
-- #76 (decide whether the JSON formatter writes extra fields) is answered by B4's allowlist. The
-  maintainer can close it or say what is left.
-
 - Raise naming uv in the claude-workbench Python conventions, so the glunk-works repos follow
   (T01's milestone description says this is outside this repo). Place
   glunk-works/claude-workbench#1349 in that repo's milestones.
