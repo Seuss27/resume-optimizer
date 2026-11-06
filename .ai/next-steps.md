@@ -1,37 +1,36 @@
 # Next steps
 
-**Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `implementing`. The repo now lives at
-`glunk-works/resume-orchestrator`: the maintainer transferred and renamed it in one step
-(`RO-D19`). The release App's reinstall is the last step of the move (#68).
+**Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `implementing`. The move to
+`glunk-works/resume-orchestrator` is done (#68 closed). The review gate (#88) is next.
 
 **Just done:**
-- #116: `RO-D19` records the rename, merged as PR #135. Critic gate (`architect`,
+- #116: `RO-D19` records the rename, merged as PR #135 (`1ba869c`). Critic gate (`architect`,
   `security-critic`, `docs-consistency`): 5 rounds, converged at the cap. #117's body was amended
   to match its stored-state rules.
-- `.github/CODEOWNERS` (`* @Seuss27`), merged as PR #136 ahead of #88. Critic gate (`architect`,
+- `.github/CODEOWNERS` (`* @Seuss27`), merged as PR #136 (`52338c2`). Critic gate (`architect`,
   `security-critic`): 1 round, converged.
-- The transfer and rename. A read-back against a pre-transfer backup found everything unchanged in
-  effect except `release-tag-creation`, which lost its only bypass actor, the release App. No `v` tag can
-  be created until the App is back.
-- #118: the repo-location references (this PR). Critic gate (`architect`, `security-critic`,
-  `docs-consistency`): 3 rounds, converged. The v0.1.0 attestation is found only under the old
-  owner, so the readme pins its repository ID and wheel digest.
+- #68: the maintainer transferred and renamed the repo in one step and moved the release App to
+  the org. The session restored the App as `release-tag-creation`'s only bypass actor, and a
+  read-back of every ruleset matches the pre-transfer backup in effect. glunk-works/claude-workbench#1349
+  has a comment recording the move.
+- #118: the repo-location references, merged as PR #137 (`9c6d4b7`). Critic gate (`architect`,
+  `security-critic`, `docs-consistency`): 3 rounds, converged. The v0.1.0 attestation is found
+  only under the old owner, so the readme pins its repository ID and wheel digest.
 
-**Next:** task #68 — finish the move. Assigned model: **opus** (architect).
-- The maintainer transfers the release App (App ID 5634115) to `glunk-works` and installs it on
-  `resume-orchestrator` only. The session then restores it as `release-tag-creation`'s only bypass
-  actor and reads the ruleset back against the backup.
-- Update glunk-works/claude-workbench#1349, which still describes the repo as owned by Seuss27,
-  with the maintainer's approval: it is an outward write.
-- Then #88, the review gate, in a fresh session. Its spec must cover:
-  - Who authors PRs once the approval ruleset is live. With one code owner, a Seuss27-authored PR
-    cannot be approved, so `glunk-dev` opens PRs first.
-  - Reading `codeowners/errors` as `[]` before the approval ruleset's read-back.
-  - Removing the maintainer's second account's write access once the deadlock is solved. It is
-    never a code owner or approver: its token is reachable by agent sessions on this machine.
-- The package rename (#117) waits for the uv move (#113), as `RO-D19` records.
+**Next:** task #88 — draft the spec for the review gate cutover with `/way-of-working:spec-task 88`
+and post it on #88 for the maintainer to approve; build nothing. Assigned model: **opus** (architect).
+The spec must settle:
+- Who authors PRs once the code-owner approval ruleset is live. One code owner cannot approve
+  its own PR, so `glunk-dev` opens PRs first, which ties #88 to glunk-works/claude-workbench#1349
+  and the uv move (#113).
+- Reading `codeowners/errors` as `[]` before the approval ruleset's read-back.
+- The cutover order, from the plugin's `reference/cutover.md`.
+- Removing the maintainer's second account's write access once the deadlock is solved. It is
+  never a code owner or approver: its token is reachable by agent sessions on this machine.
 
-**HITL Gate: OPEN** — the maintainer transfers and installs the release App before the session restores the `release-tag-creation` bypass
+The package rename (#117) waits for the uv move (#113), as `RO-D19` records.
+
+**HITL Gate: NONE OPEN** — next gate: the maintainer approves the spec on #88 before any build starts
 
 **Open for the owner (non-blocking):**
 - Neither #117 nor #118 owns the project's display title (`CLAUDE.md` and readme headings, the
