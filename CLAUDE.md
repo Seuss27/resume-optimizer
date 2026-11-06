@@ -58,6 +58,7 @@ governs. Every local deviation is listed under *Deviations and known gaps*.
 | **critics** review *diffs* | the **reviewer** role reviews *a draft* against the ledger |
 | **Architect Review**, **HITL Gate**: PR checkpoints | **code gates** and **console human gates** in a run (plan §3.3) |
 | `.ai/`: the session cursor | a run directory under `RO_RUNS_DIR` (plan §3.1) |
+| glunk-works' `loop-orchestrator` and the workbench's *Orchestrator* milestones: the org's dev loop (`orchestration` in `.ai/project.yml`) | **run orchestration**: `ro` driving one run through gates and roles (`RO-D9`, plan §3.3) |
 
 ## Areas
 

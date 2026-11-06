@@ -230,3 +230,40 @@ Residuals:
 - A process running as the maintainer can dispatch and approve a release, an instance of plan §5's
   accepted residual. The `CLAUDE.md` clause and the `gh workflow run` deny rules in
   `.claude/settings.json` are conventions against it, not controls.
+
+## RO-D19 — The project is renamed resume-orchestrator
+
+*Decided 2026-11-06 (maintainer).*
+The project is renamed from resume-optimizer to resume-orchestrator: the GitHub repo, the
+distribution, the import package (`resume_orchestrator`) and the application name. The initials
+stay RO, so the `ro` CLI, the `RO_*` environment variables and the `RO-D*` IDs keep their meaning.
+The rename lands in two parts, which may land in either order:
+- **This code repo** is renamed together with its transfer to glunk-works (plan F6), so its URL
+  changes once. The rename does not touch the private ledger repo, which stays on the
+  maintainer's account (RO-D15).
+- **The package, the distribution and the application name** are renamed in their own task, after
+  the toolchain moves to uv, so the uv move and the package rename do not both rewrite
+  `pyproject.toml` and the gate at once. The label namespace for labels the pipeline writes moves
+  from `resume-optimizer/…` to `resume-orchestrator/…` with it.
+
+The old names key stored state: the default ledger, runs and log directories (`APP_NAME`) and the
+keyring service the provider keys are stored under (`SERVICE_NAME`). Where old state exists, the
+renamed code never starts empty:
+- **Directories:** each old directory is carried over, or the run refuses, naming the directory by
+  its variable, never by its path.
+- **Provider keys:** the credentials module stays a reader. A provider key still stored under the
+  old service makes it refuse and name both service names, and the maintainer moves the entry with
+  `python -m keyring set` and `del`.
+
+The data-path check in `paths.py` recognises a checkout under either package name. So the old names
+stay in `src/` only where old state is detected or carried over, or an old checkout is recognised.
+Residual: a `resume-optimizer` distribution installed before the rename (its `generate-resume` and
+`build-resume-state` entry points today) cannot recognise a renamed checkout, so it is upgraded
+before a data path is pointed near one.
+**Why:** "optimizer" reads as ATS keyword-tuning, a promise the legacy generator made and the
+pipeline does not: every factual claim cites ledger evidence (RO-D3). "Orchestrator" names what
+the plan builds, a run that code drives through gates and tool-less roles (RO-D1, RO-D9).
+
+The glunk-works org already uses "orchestrator" for its development loop. The maintainer accepts
+the reuse, because orchestration is a role many components can have. `CLAUDE.md`'s *Two
+vocabularies* table keeps the product's run orchestration apart from the dev workflow's.
