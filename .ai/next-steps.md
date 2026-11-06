@@ -1,30 +1,24 @@
 # Next steps
 
 **Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `implementing`. #73 (the Word and
-docx2pdf risk on the render path) has a spec and is ready to build.
+docx2pdf risk on the render path) is built and merged as PR #130 (`853f464`).
 
 **Just done:**
-- Posted the #73 spec as comment 6673788204, against `main` at `2c21c9a`.
-  - It replaces `docx2pdf` on Windows with a new `word_pdf` module, which starts its own Word with
-    `DispatchEx` and quits it only when nothing else is open in it.
-  - A converter timeout kills the whole process tree, plus the Word this run started when it can
-    be identified.
-  - A fixed-text warning reports a temp copy that was left behind, and the `soffice.com` lookup is
-    fixed.
-- The critic gate (`architect`, `security-critic`, `docs-consistency`) ran 4 rounds and converged.
-  - Tightenings left for the builder: add setting `DisplayAlerts`, and a failing first
-    `list_pids` call, to the `run` failure cases; skip the POSIX `os.killpg` when the pid is 1 or
-    less or is this process's own; say "whatever the count of new ids" for `AutomationSecurity`.
-- The maintainer chose to keep Word as the reference converter. A Linux devcontainer falls back
-  to `soffice` and needs LibreOffice in its image. A switch to LibreOffice everywhere would be a
-  separate issue and a decision entry.
+- Built #73 and merged it as PR #130.
+  - A new `word_pdf` module replaces `docx2pdf` on Windows. A converter timeout or abort kills the
+    converter's process tree, plus the Word it started when that Word could be identified.
+  - A fixed-text warning reports a temp copy left behind, and the `soffice.com` lookup is fixed.
+  - `pywin32` is pinned for Windows only.
+- Critic gate (`architect`, `security-critic`, `docs-consistency`): 3 rounds, converged. It was not
+  the fresh-session review.
+- The local gate passed on Windows. The Linux-only grandchild-kill test is skipped there, and the
+  same scenario was run against the real `_run` in WSL.
 
-**Next:** task #73 — build the converter safety fix from spec comment
-https://github.com/Seuss27/resume-optimizer/issues/73#issuecomment-6673788204, run the green
-gate (on Windows as well as in CI) and the critic gate, then ship the PR. #68 (F6, the transfer)
-stays with the maintainer. Assigned model: **sonnet** (coder).
+**Next:** the maintainer picks the next S02 task, then `/way-of-working:spec-task <N>` drafts its
+spec. The three post-merge Word checks are listed in PR #130's body and are still to be run.
+#68 (F6, the transfer) stays with the maintainer. Assigned model: **sonnet** (coder).
 
-**HITL Gate: NONE OPEN** — next gate: the maintainer merges the #73 PR, then runs the post-merge Word checks the spec lists
+**HITL Gate: OPEN** — the maintainer picks the next S02 task, and runs the post-merge Word checks from PR 130
 
 **Open for the owner (non-blocking):**
 - F6 (#68) checklist for the release setup: transfer or recreate the release App, reinstall it on
