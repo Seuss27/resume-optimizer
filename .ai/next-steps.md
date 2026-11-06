@@ -1,36 +1,33 @@
 # Next steps
 
-**Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `implementing`. The move to
-`glunk-works/resume-orchestrator` is done (#68 closed). The review gate (#88) is next.
+**Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `implementing`. #88's spec is
+approved; #115's spec is next.
 
 **Just done:**
-- #116: `RO-D19` records the rename, merged as PR #135 (`1ba869c`). Critic gate (`architect`,
-  `security-critic`, `docs-consistency`): 5 rounds, converged at the cap. #117's body was amended
-  to match its stored-state rules.
-- `.github/CODEOWNERS` (`* @Seuss27`), merged as PR #136 (`52338c2`). Critic gate (`architect`,
-  `security-critic`): 1 round, converged.
-- #68: the maintainer transferred and renamed the repo in one step and moved the release App to
-  the org. The session restored the App as `release-tag-creation`'s only bypass actor, and a
-  read-back of every ruleset matches the pre-transfer backup in effect. glunk-works/claude-workbench#1349
-  has a comment recording the move.
-- #118: the repo-location references, merged as PR #137 (`9c6d4b7`). Critic gate (`architect`,
-  `security-critic`, `docs-consistency`): 3 rounds, converged. The v0.1.0 attestation is found
-  only under the old owner, so the readme pins its repository ID and wheel digest.
+- #88's spec, comment 6690566962, approved by the maintainer's reaction. It replaces three
+  escalated drafts (6686357536, 6687169809, 6689109312). PR 1 is built from a host session in a
+  fresh clone and published as `glunk-admin[bot]` with a down-scoped `wow-admin` token, and after
+  the cutover dev-workflow sessions run in dev containers. Critic gate (`architect`,
+  `security-critic`, `docs-consistency`): 3 rounds, converged. Two tightenings were left out: the
+  rename-and-revoke route for a leftover `.mint.*` file should require a complete `expires_at`
+  line, and the review clone stays outside container mounts for the whole build.
+- #113 and #115 moved from milestone 11 (T01) into S02, because #88's spec needs #113 merged and
+  #115's spec approved before its build starts.
+- The claude-workbench driver confirmed the spec as posted, including `loop_app` declared, the
+  broker entry and dev token after #115 merges, and the fresh host critic session for PR 1.
+  `glunk-review` now has access to this repo.
 
-**Next:** task #88 — draft the spec for the review gate cutover with `/way-of-working:spec-task 88`
-and post it on #88 for the maintainer to approve; build nothing. Assigned model: **opus** (architect).
-The spec must settle:
-- Who authors PRs once the code-owner approval ruleset is live. One code owner cannot approve
-  its own PR, so `glunk-dev` opens PRs first, which ties #88 to glunk-works/claude-workbench#1349
-  and the uv move (#113).
-- Reading `codeowners/errors` as `[]` before the approval ruleset's read-back.
-- The cutover order, from the plugin's `reference/cutover.md`.
-- Removing the maintainer's second account's write access once the deadlock is solved. It is
-  never a code owner or approver: its token is reachable by agent sessions on this machine.
+**Next:** task #115 — draft the spec for adopting the shared dev-App container with
+`/way-of-working:spec-task 115` and post it on #115 for the maintainer to approve; build nothing.
+Assigned model: **opus** (architect). Per #88's spec, #115 lands after PR 1 merges, is published
+as `glunk-admin[bot]` by the same host route, and is the gate's first live run. It covers
+`.devcontainer/` from the shared template, the devcontainer-image caller and the
+`secret-scan.yml` edit, and waits on glunk-works/claude-workbench#1226 and the #1165 procedure.
+Order after that: #113's spec and build, then #88's build, then #115's build.
 
 The package rename (#117) waits for the uv move (#113), as `RO-D19` records.
 
-**HITL Gate: NONE OPEN** — next gate: the maintainer approves the spec on #88 before any build starts
+**HITL Gate: NONE OPEN** — next gate: the maintainer approves the spec on #115 before any build starts
 
 **Open for the owner (non-blocking):**
 - Neither #117 nor #118 owns the project's display title (`CLAUDE.md` and readme headings, the
@@ -69,6 +66,7 @@ The package rename (#117) waits for the uv move (#113), as `RO-D19` records.
   - no symlink check on the log file
   - a half-detached handler pair is not repaired
   - the docstring and template say "WARNING" where the filter passes WARNING and above
+- Milestone 11's (T01's) description may still list #113 and #115, which are now on S02.
 - Raise naming uv in the claude-workbench Python conventions, so the glunk-works repos follow
   (T01's milestone description says this is outside this repo). Place
   glunk-works/claude-workbench#1349 in that repo's milestones.
