@@ -1,3 +1,7 @@
 """The resume-optimizer package."""
 
-__version__ = "0.1.0"
+from importlib.metadata import version
+
+# pyproject.toml holds the only copy of the version. There is no fallback on purpose:
+# importing the package without it installed raises.
+__version__ = version("resume-optimizer")

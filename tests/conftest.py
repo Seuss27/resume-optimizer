@@ -22,7 +22,6 @@ _IGNORED_DIRS: frozenset[str] = frozenset(
         ".mypy_cache",
         ".tox",
         ".nox",
-        ".hatch",
         ".venv",
         "venv",
         "env",

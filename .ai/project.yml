@@ -43,6 +43,8 @@ code_paths:
   - .github/
   - .ai/project.yml
   - pyproject.toml
+  - uv.lock
+  - .python-version
   - .gitignore              # the main guard against personal data being committed
   - .pre-commit-config.yaml
   - betterleaks.toml        # absent on purpose: the org scan reads it, and the ignore file below, from the
@@ -54,9 +56,9 @@ code_paths:
 # A local pre-check; CI on the PR is the gate of record.
 gates:
   green:
-    - { run: hatch run test }
-    - { run: hatch run lint }
-    - { run: hatch run format --check }
+    - { run: uv run pytest }
+    - { run: uv run ruff check . }
+    - { run: uv run ruff format --check . }
 
 # ── branch protection ────────────────────────────────────────────────────────
 # `main-required-checks` (ruleset id 26540407), `enforcement: active`, no bypass actors (read from

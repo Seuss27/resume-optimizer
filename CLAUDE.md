@@ -133,9 +133,9 @@ provider or the network, and never read or write the repo root.
 ## Local green gate
 
 ```
-hatch run test                 # pytest tests
-hatch run lint                 # ruff check .
-hatch run format --check       # ruff format --check
+uv run pytest                  # pytest
+uv run ruff check .            # ruff check .
+uv run ruff format --check .   # ruff format --check
 ```
 
 CI on the PR is the gate of record: the checks GitHub runs on the PR. They cover the local
@@ -152,7 +152,7 @@ repo rather than suppressing the rule.
 
 | Item | Removed by |
 |---|---|
-| The working directory (the checkout root under the readme's Hatch flow) still receives `tune_template.py`'s outputs, and still supplies the pandoc reference document and `tune_template.py`'s tracked input — vs this file | D5 removes `tune_template.py`, F4 the legacy path that reads the reference document. The CSVs and `master_data.json` now live in `RO_LEDGER_DIR`, and C6 retires them |
+| The working directory (the checkout root under the readme's uv flow) still receives `tune_template.py`'s outputs, and still supplies the pandoc reference document and `tune_template.py`'s tracked input — vs this file | D5 removes `tune_template.py`, F4 the legacy path that reads the reference document. The CSVs and `master_data.json` now live in `RO_LEDGER_DIR`, and C6 retires them |
 | PRs target `main`, with no `develop` integration branch, as in claude-workbench | permanent (`pr_base: main`) |
 | Branch prefixes cover every commit type, not only `feat\|fix\|chore\|docs` | permanent |
 | `pr-title` rejects the `!` breaking-change marker that `conventions.md` allows | permanent |

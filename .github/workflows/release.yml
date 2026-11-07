@@ -1,7 +1,7 @@
 name: Release
 
 # A release is cut by dispatching this workflow from the default branch, never by pushing a tag
-# (RO-D18). The tag is derived from the version in the package __init__.py and comes into
+# (RO-D18). The tag is derived from the version in pyproject.toml and comes into
 # existence only when the draft release is published. Dispatch with the dry run left on first:
 # it does everything except attest, create, upload and publish.
 
@@ -113,7 +113,7 @@ jobs:
           fi
           wheel=$(basename "$1")
           python .github/scripts/release_plan.py \
-            --init src/resume_optimizer/__init__.py \
+            --pyproject pyproject.toml \
             --wheel "$wheel" \
             --changelog CHANGELOG.md \
             --all-tags "$RUNNER_TEMP/all-tags.txt" \
