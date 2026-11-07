@@ -698,8 +698,7 @@ the maintainer approves it. That approval also confirms the RO-D wording.
   - `requires-python >=3.14`, ruff `target-version = "py314"`, and classifiers to match.
   - Ruff rules `E,F,I,B,S` at line length 100. The test-only `per-file-ignores` follow the
     glunk-works repos.
-  - Ruff pinned to the version the glunk-works repos use, in the hatch env and in
-    `.pre-commit-config.yaml`.
+  - Ruff pinned in `pyproject.toml` and `.pre-commit-config.yaml` (`RO-D20` sets its version).
   - The `B` findings fixed.
   - `evaluate_desirability` routed through the adapter.
 
@@ -758,8 +757,8 @@ the maintainer approves it. That approval also confirms the RO-D wording.
   - **Dependabot:** `.github/dependabot.yml` names the ecosystems and their schedules. Every
     entry sets a `chore` or `ci` prefix with `include: scope`, so a Dependabot PR title meets
     `pr-title`'s type and scope rules. The rule that ignored major versions is dropped.
-  - **Dependencies:** pinned to exact versions in `pyproject.toml` and the hatch envs, as the
-    glunk-works repos do. The pin set is CVE-clean under `pip-audit`.
+  - **Dependencies:** pinned to exact versions in `pyproject.toml` (`RO-D20` sets how they are
+    locked). The pin set is CVE-clean under `pip-audit`.
   - **Ruleset swap, done in the order `conventions.md` § *Prose economy* requires:** the new
     jobs first run on this task's PR. Just before merge, the maintainer's session updates
     `main-required-checks` on GitHub to require `lint`, `test`, `dependency-audit`, `sbom`,

@@ -207,7 +207,7 @@ will assert it.
 
 ## RO-D18 — Releases are dispatched from `main`, never tagged by hand
 
-*Decided 2026-11-05 (maintainer).*
+*Decided 2026-11-05 (maintainer). Partly superseded by RO-D20 for the version source and the build residual.*
 A release is cut by dispatching the `release` workflow from `main`, never by pushing a tag. The
 tag is derived from the version in the package `__init__.py`, and it comes into existence only
 when the draft release is published. Every `ci.yml` job re-runs at the release commit. The
@@ -267,3 +267,37 @@ the plan builds, a run that code drives through gates and tool-less roles (RO-D1
 The glunk-works org already uses "orchestrator" for its development loop. The maintainer accepts
 the reuse, because orchestration is a role many components can have. `CLAUDE.md`'s *Two
 vocabularies* table keeps the product's run orchestration apart from the dev workflow's.
+
+## RO-D20 — The toolchain moves from Hatch to uv
+
+*Decided 2026-11-07 (maintainer).*
+uv manages the project environment, the lock file (`uv.lock`, committed) and command running
+(`uv run`), and `uv_build` replaces `hatchling` as the build backend. Hatch is no longer used. The
+move lands in its own task, after which `RO-D19`'s package rename follows.
+- **Version source:** the version is a static `version` in `pyproject.toml`, the single source. The
+  package `__init__.py` stops being a version source. The release tag is derived from the version
+  in `pyproject.toml`; the rest of `RO-D18`'s tag rules are unchanged.
+- **uv's pin:** CI installs uv at an exact version, set in the workflow files as an `env:` value
+  named `UV_VERSION`, never a repository or organization variable, which sits outside review. CI
+  checks that every copy of it agrees with the `uv_build` pin in `[build-system]`.
+  `required-version` in `pyproject.toml`'s uv settings is a floor for local use, not a pin.
+- **The interpreter:** every workflow job that installs the project or its dev dependencies gets
+  Python from uv, not from `actions/setup-python`. That covers every job in `ci.yml`, the advisory
+  3.15 job and the `test` job that builds and smoke-tests the wheel included. If uv cannot provide
+  a 3.15 interpreter, that one job may keep `actions/setup-python` and point `UV_PYTHON` at it. A
+  job that installs neither and only runs a standalone script may keep `actions/setup-python`: the
+  `release` job in `release.yml`, which uses the wheel CI built, and the `pr-title` and
+  `ruleset-drift` workflows.
+- **Ruff:** its version follows this repo's own Dependabot pins, no longer the version the
+  glunk-works repos use. The pins in `pyproject.toml` and `.pre-commit-config.yaml` stay equal, so
+  their Dependabot PRs are merged together.
+
+**Why:** the shared devcontainer base image in `603-Identity/devcontainers` names uv as the project
+manager for every Python repo, reserves `/workspace/.venv` for the uv project environment, and
+ships no Hatch, and this repo is due to adopt that devcontainer. Its glunk-works peers used Hatch
+when this was decided, so this repo leads them until the workbench's Python conventions name a
+tool.
+
+Residual: the wheel is built in a job that uses uv's cache and a build backend pinned to an exact
+version but not by hash, so the attestation covers the built bytes, not a hermetic build. This
+replaces `RO-D18`'s second residual for the uv build.
