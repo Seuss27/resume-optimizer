@@ -10,6 +10,15 @@ on:
 permissions:
   contents: read
 
+env:
+  # The one place CI's uv version is written. check_uv_pin.py compares it with the uv_build pin
+  # in pyproject.toml, so a one-sided bump fails CI. A uv newer than the pinned setup-uv knows
+  # may also need a setup-uv bump.
+  UV_VERSION: "0.13.7"
+  # No uv sync, uv run or uv export step may re-resolve uv.lock. It does not cover uv build,
+  # uv venv or uv pip install.
+  UV_LOCKED: "1"
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -19,22 +28,23 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up Python 3.14
-        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+      - name: Set up uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
-          python-version: "3.14"
-          cache: pip
+          enable-cache: false
+          version: ${{ env.UV_VERSION }}
 
-      - name: Install project and dev dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+      - name: Check the uv pin
+        run: uv run --no-project python .github/scripts/check_uv_pin.py pyproject.toml "$UV_VERSION" "$(uv --version)"
+
+      - name: Install the locked project and dev dependencies
+        run: uv sync
 
       - name: Ruff check
-        run: ruff check .
+        run: uv run ruff check .
 
       - name: Ruff format check
-        run: ruff format --check .
+        run: uv run ruff format --check .
 
   test:
     runs-on: ubuntu-latest
@@ -44,28 +54,29 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up Python 3.14
-        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+      - name: Set up uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
-          python-version: "3.14"
-          cache: pip
+          enable-cache: false
+          version: ${{ env.UV_VERSION }}
 
-      - name: Install project and dev dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+      - name: Check the uv pin
+        run: uv run --no-project python .github/scripts/check_uv_pin.py pyproject.toml "$UV_VERSION" "$(uv --version)"
+
+      - name: Install the locked project and dev dependencies
+        run: uv sync
 
       - name: Run test suite
-        run: python -m pytest -q
+        run: uv run pytest -q
 
       - name: Check tracked paths
-        run: python .github/scripts/check_tracked_paths.py
+        run: uv run python .github/scripts/check_tracked_paths.py
 
       - name: Wheel smoke test
         run: |
-          python -m pip wheel . --no-deps -w "$RUNNER_TEMP/wheel"
-          python -m venv "$RUNNER_TEMP/smoke-venv"
-          "$RUNNER_TEMP/smoke-venv/bin/python" -m pip install "$RUNNER_TEMP"/wheel/*.whl
+          uv build --wheel --out-dir "$RUNNER_TEMP/wheel"
+          uv venv --python 3.14 "$RUNNER_TEMP/smoke-venv"
+          uv pip install --python "$RUNNER_TEMP/smoke-venv/bin/python" "$RUNNER_TEMP"/wheel/*.whl
           mkdir "$RUNNER_TEMP/elsewhere"
           cd "$RUNNER_TEMP/elsewhere"
           "$RUNNER_TEMP/smoke-venv/bin/python" -I "$GITHUB_WORKSPACE/.github/scripts/wheel_smoke.py" "$RUNNER_TEMP"/wheel/*.whl
@@ -82,26 +93,31 @@ jobs:
   test-py315:
     runs-on: ubuntu-latest
     continue-on-error: true
+    env:
+      UV_PYTHON: "3.15"
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - name: Set up Python 3.15
-        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+      - name: Set up uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
-          python-version: "3.15"
-          allow-prereleases: true
-          cache: pip
+          enable-cache: false
+          version: ${{ env.UV_VERSION }}
 
-      - name: Install project and dev dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+      - name: Check the uv pin
+        run: uv run --no-project python .github/scripts/check_uv_pin.py pyproject.toml "$UV_VERSION" "$(uv --version)"
+
+      - name: Install the locked project and dev dependencies
+        run: uv sync
+
+      - name: Check the interpreter is 3.15
+        run: uv run python -c "import sys; sys.exit(0 if sys.version_info[:2] == (3, 15) else 1)"
 
       - name: Run test suite
-        run: python -m pytest -q
+        run: uv run pytest -q
 
   dependency-audit:
     runs-on: ubuntu-latest
@@ -111,19 +127,23 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up Python 3.14
-        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+      - name: Set up uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
-          python-version: "3.14"
+          enable-cache: false
+          version: ${{ env.UV_VERSION }}
 
-      - name: Install the project into a fresh environment
-        run: |
-          python -m venv "$RUNNER_TEMP/audit-venv"
-          "$RUNNER_TEMP/audit-venv/bin/python" -m pip install --upgrade pip
-          "$RUNNER_TEMP/audit-venv/bin/pip" install -e ".[dev]"
+      - name: Check the uv pin
+        run: uv run --no-project python .github/scripts/check_uv_pin.py pyproject.toml "$UV_VERSION" "$(uv --version)"
 
-      - name: Audit the installed dependencies
-        run: '"$RUNNER_TEMP/audit-venv/bin/pip-audit" --skip-editable'
+      - name: Install the locked project and dev dependencies
+        run: uv sync
+
+      - name: Export the locked requirements
+        run: uv export --format requirements.txt --all-groups --no-emit-project -o "$RUNNER_TEMP/requirements.txt"
+
+      - name: Audit the locked dependencies
+        run: uv run pip-audit --disable-pip --require-hashes -r "$RUNNER_TEMP/requirements.txt"
 
   sbom:
     runs-on: ubuntu-latest
@@ -133,21 +153,22 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up Python 3.14
-        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+      - name: Set up uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
-          python-version: "3.14"
+          enable-cache: false
+          version: ${{ env.UV_VERSION }}
 
-      - name: Install the project into a fresh environment
-        run: |
-          python -m venv "$RUNNER_TEMP/sbom-venv"
-          "$RUNNER_TEMP/sbom-venv/bin/python" -m pip install --upgrade pip
-          "$RUNNER_TEMP/sbom-venv/bin/pip" install -e ".[dev]"
+      - name: Check the uv pin
+        run: uv run --no-project python .github/scripts/check_uv_pin.py pyproject.toml "$UV_VERSION" "$(uv --version)"
+
+      - name: Install the locked project and dev dependencies
+        run: uv sync
 
       - name: Generate the SBOM
         run: |
-          "$RUNNER_TEMP/sbom-venv/bin/cyclonedx-py" environment \
-            --of JSON -o "$RUNNER_TEMP/sbom.cdx.json" "$RUNNER_TEMP/sbom-venv/bin/python"
+          uv run cyclonedx-py environment \
+            --of JSON -o "$RUNNER_TEMP/sbom.cdx.json" .venv/bin/python
 
       - name: Upload the SBOM
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -165,17 +186,19 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up Python 3.14
-        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+      - name: Set up uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
-          python-version: "3.14"
+          enable-cache: false
+          version: ${{ env.UV_VERSION }}
 
-      - name: Install the pinned dev dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install ".[dev]"
+      - name: Check the uv pin
+        run: uv run --no-project python .github/scripts/check_uv_pin.py pyproject.toml "$UV_VERSION" "$(uv --version)"
+
+      - name: Install the locked project and dev dependencies
+        run: uv sync
 
       - name: Lint the workflows and the Dependabot config
         env:
           GH_TOKEN: ${{ github.token }}
-        run: zizmor .github
+        run: uv run zizmor .github

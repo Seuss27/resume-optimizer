@@ -29,6 +29,7 @@ temp_*.md
 # Python Artifacts
 __pycache__/
 *.pyc
+dist/
 *.msi
 
 # Virtual Environments

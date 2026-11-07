@@ -1,19 +1,24 @@
 """Runs the mock pipeline from an installed wheel, outside the checkout (plan task B2).
 
-CI runs it as `python -I wheel_smoke.py <wheel>`, with the interpreter of a plain venv the wheel
-was installed into, from a directory outside the checkout. Every check raises SystemExit with a
-message. All data is synthetic and the provider, pandoc and the page counter are stood in for.
+CI runs it as `python -I wheel_smoke.py <wheel>`, with the interpreter of a venv that `uv venv`
+created and the wheel was installed into, from a directory outside the checkout. Every check
+raises SystemExit with a message. All data is synthetic and the provider, pandoc and the page
+counter are stood in for.
 """
 
+import email.parser
 import importlib.metadata
 import json
 import os
+import re
 import sys
 import tempfile
 import zipfile
 from pathlib import Path
 from typing import Any
 
+_N: str = r"(?:0|[1-9][0-9]*)"
+BARE: re.Pattern[str] = re.compile(rf"{_N}\.{_N}\.{_N}")
 PACKAGED: tuple[str, ...] = (
     "resume_optimizer/prompts/system_prompt.txt",
     "resume_optimizer/prompts/master_prompt.txt",
@@ -45,12 +50,38 @@ def check_wheel(argv: list[str]) -> Path:
 
 
 def check_versions(wheel: Path, package_version: str) -> None:
-    """The installed metadata and the wheel file name must both carry the package version."""
-    if importlib.metadata.version("resume-optimizer") != package_version:
-        fail("the installed metadata version differs from the package __version__")
+    """Four versions must be equal and a bare major.minor.patch.
+
+    They are the wheel's own METADATA header, the installed metadata, the package's
+    `__version__` and the wheel file name's version field.
+    """
+    with zipfile.ZipFile(wheel) as archive:
+        metadata_names: list[str] = [
+            name
+            for name in archive.namelist()
+            if name.count("/") == 1
+            and name.split("/")[0].endswith(".dist-info")
+            and name.endswith("/METADATA")
+        ]
+        if len(metadata_names) != 1:
+            fail("the wheel must hold exactly one top-level .dist-info/METADATA file")
+        text: str = archive.read(metadata_names[0]).decode("utf-8")
+    headers: list[str] = email.parser.Parser().parsestr(text).get_all("Version") or []
+    if len(headers) != 1:
+        fail("the wheel's METADATA must have exactly one Version header")
     fields: list[str] = wheel.name.split("-")
-    if len(fields) < 2 or fields[1] != package_version:
-        fail("the wheel file name's version differs from the package __version__")
+    if len(fields) < 2:
+        fail("the wheel file name has no version field")
+    values: set[str] = {
+        headers[0],
+        importlib.metadata.version("resume-optimizer"),
+        package_version,
+        fields[1],
+    }
+    if len(values) != 1:
+        fail("the wheel METADATA, installed metadata, __version__ and file name differ")
+    if BARE.fullmatch(package_version) is None:
+        fail("the version is not a bare major.minor.patch")
 
 
 def main(argv: list[str]) -> None:

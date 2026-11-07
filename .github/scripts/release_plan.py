@@ -1,16 +1,17 @@
 """The release workflow's deterministic planning step (plan task B7, RO-D18).
 
-It reads the package version with `ast` (the file is never imported), checks it against the
+It reads `[project].version` from pyproject.toml with `tomllib`, checks it against the
 wheel's file name, the changelog and three lists of tag names, writes the release notes and
 prints exactly three lines on stdout: `version=`, `tag=` and `previous=` (empty when there is no
 earlier release). It makes no network or git calls. Each refusal goes to stderr and exits 1.
 """
 
 import argparse
-import ast
 import re
 import sys
+import tomllib
 from pathlib import Path
+from typing import Any
 
 NUMBER: str = r"(?:0|[1-9][0-9]*)"
 VERSION: re.Pattern[str] = re.compile(rf"({NUMBER})\.({NUMBER})\.({NUMBER})")
@@ -24,34 +25,32 @@ class Refusal(Exception):
     """A check failed; the message names it."""
 
 
-def read_version(init_path: Path) -> str:
-    """Returns the one top-level `__version__` string, parsed without importing the file."""
-    tree: ast.Module = ast.parse(init_path.read_text(encoding="utf-8"))
-    assigns: list[ast.Assign] = []
-    for node in tree.body:
-        if isinstance(node, ast.AnnAssign) and _names_version(node.target):
-            raise Refusal("version: __version__ must not be annotated")
-        if isinstance(node, ast.Assign) and any(_names_version(t) for t in node.targets):
-            assigns.append(node)
-    if len(assigns) != 1:
-        raise Refusal("version: expected exactly one top-level __version__ assignment")
-    value: ast.expr = assigns[0].value
-    if not isinstance(value, ast.Constant) or not isinstance(value.value, str):
-        raise Refusal("version: __version__ must be a string constant")
-    if VERSION.fullmatch(value.value) is None:
-        raise Refusal("version: __version__ must be a bare major.minor.patch")
-    return value.value
-
-
-def _names_version(target: ast.expr) -> bool:
-    return isinstance(target, ast.Name) and target.id == "__version__"
+def read_version(pyproject_path: Path) -> str:
+    """Returns `[project].version` from a pyproject.toml, which `tomllib` parses and never runs."""
+    data: dict[str, Any] = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
+    project: Any = data.get("project")
+    if not isinstance(project, dict):
+        raise Refusal("version: pyproject.toml has no [project] table")
+    dynamic: Any = project.get("dynamic", [])
+    if not isinstance(dynamic, list) or not all(isinstance(item, str) for item in dynamic):
+        raise Refusal("version: [project].dynamic must be a list of strings")
+    if "version" in dynamic:
+        raise Refusal("version: [project].version must be static, not listed under dynamic")
+    if "version" not in project:
+        raise Refusal("version: [project].version is missing")
+    value: Any = project["version"]
+    if not isinstance(value, str):
+        raise Refusal("version: [project].version must be a string")
+    if VERSION.fullmatch(value) is None:
+        raise Refusal("version: [project].version must be a bare major.minor.patch")
+    return value
 
 
 def check_wheel(wheel_name: str, version: str) -> None:
     """The wheel file name's version field (the second dash-separated field) must equal it."""
     fields: list[str] = Path(wheel_name).name.split("-")
     if len(fields) < 2 or fields[1] != version:
-        raise Refusal("wheel: the file name's version does not equal __version__")
+        raise Refusal("wheel: the file name's version does not equal [project].version")
 
 
 def read_tags(path: Path, label: str) -> list[str]:
@@ -99,7 +98,7 @@ def changelog_section(changelog: Path, version: str) -> str:
 
 def plan(args: argparse.Namespace) -> tuple[str, str, str]:
     """Runs every check, writes the notes file and returns (version, tag, previous)."""
-    version: str = read_version(args.init)
+    version: str = read_version(args.pyproject)
     check_wheel(args.wheel, version)
     tag: str = f"v{version}"
     existing: list[str] = read_tags(args.all_tags, "existing")
@@ -126,7 +125,7 @@ def plan(args: argparse.Namespace) -> tuple[str, str, str]:
 def main(argv: list[str]) -> int:
     """Entry point; prints the three output lines or the refusal."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--init", type=Path, required=True)
+    parser.add_argument("--pyproject", type=Path, required=True)
     parser.add_argument("--wheel", required=True)
     parser.add_argument("--changelog", type=Path, required=True)
     parser.add_argument("--all-tags", type=Path, required=True)

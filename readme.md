@@ -26,15 +26,13 @@ When you find a job you want to apply for, the engine:
 
 Choose **one** of the following environment options to install and run the workspace.
 
-### Option A: Clean Workspace via Hatch (Recommended)
+### Option A: uv (Recommended)
 
-This method utilizes [Hatch](https://hatch.pypa.io/) to natively manage virtual runtimes, dependencies, and execution mappings in an isolated system cache without cluttering your local directory.
+This method uses [uv](https://docs.astral.sh/uv/) to own the environment, the lock file and the
+build. The `.venv` it creates sits in the checkout and is git-ignored.
 
-1. **Install Hatch globally** (via pipx or your global python layer):
-
-   ```bash
-   pipx install hatch
-   ```
+1. **Install uv**, at or above the floor that `required-version` under `[tool.uv]` in
+   `pyproject.toml` sets (see uv's install guide).
 
 2. **Clone the repository and enter the workspace:**
 
@@ -43,7 +41,16 @@ This method utilizes [Hatch](https://hatch.pypa.io/) to natively manage virtual 
    cd resume-orchestrator
    ```
 
-3. Everything is ready! Hatch will build and hydrate your environment on your first execution script call.
+3. **Create the environment from the lock file:**
+
+   ```bash
+   uv sync
+   ```
+
+The released wheel is built in CI from a fresh checkout. A local `uv build` can pick up ignored
+files under the package directory, because `uv_build` does not read `.gitignore`. If a newer
+local uv changes the `revision` in `uv.lock`, regenerate the lock with the uv version CI pins,
+which is `UV_VERSION` in `.github/workflows/ci.yml`.
 
 ### Option B: Traditional Virtual Environment via Pip
 
@@ -67,8 +74,10 @@ If you prefer a standard local virtual environment workflow using standard pytho
 
    ```bash
    pip install --upgrade pip
-   pip install -e .[dev]
+   pip install -e . --group dev
    ```
+
+   The `--group` option needs pip 25.1 or later.
 
 ### Option C: Install a Released Wheel
 
@@ -153,7 +162,7 @@ task. A tool install does not carry everything:
 
 The steps only. `RO-D18` in [docs/decisions.md](docs/decisions.md) holds the rules and the why.
 
-1. In one PR, bump the version in `src/resume_optimizer/__init__.py` and move the changelog's
+1. In one PR, bump `[project].version` in `pyproject.toml`, run `uv lock`, and move the changelog's
    unreleased entries into a section for that version, headed `## [X.Y.Z] - YYYY-MM-DD`.
 2. After the squash merge, the maintainer dispatches the release workflow from `main` with the
    dry run left on, approves the `release` environment, and reads the printed plan and notes.
@@ -169,10 +178,10 @@ The steps only. `RO-D18` in [docs/decisions.md](docs/decisions.md) holds the rul
 1. **Store your API key in the OS keyring:**
 
    ```bash
-   hatch run python -m keyring set resume-optimizer gemini-api-key
+   uv run python -m keyring set resume-optimizer gemini-api-key
    ```
 
-   Under Option B, with the venv active, drop the `hatch run` prefix.
+   Under Option B, with the venv active, drop the `uv run` prefix.
    Enter the key at the prompt, never on the command line. The tool reads it from the keyring only.
    A `.env` file from an earlier version is no longer read: move its key into the keyring, then
    delete the file, and remove any `GEMINI_API_KEY` export from your shell profile too.
@@ -194,20 +203,20 @@ The steps only. `RO-D18` in [docs/decisions.md](docs/decisions.md) holds the rul
 
 Depending on your installation path chosen above, run the preprocessor followed by the core AI engine:
 
-### If Using Hatch (Option A)
+### If Using uv (Option A)
 
 ```bash
 # Step 1: Preprocess your CSVs into unified JSON state
-hatch run build-state
+uv run build-resume-state
 
 # Step 2: Paste the target job requisition text to compile outputs
-hatch run generate
+uv run generate-resume
 
 # Optional: compile outputs, run ATS validation, evaluate job desirability, and preserve markdown files
-hatch run generate -- --validate --score-job --preserve-markdown
+uv run generate-resume --validate --score-job --preserve-markdown
 
 # Generate a complete Master Resume without tailoring to a specific job (skips cover letter)
-hatch run generate -- --master
+uv run generate-resume --master
 ```
 
 ### If Using Standard Pip Entry Points (Option B)
@@ -259,12 +268,13 @@ your personal preferences. Here is how to interpret the results:
 
 ## Development Commands
 
-For developers validating changes or contributing to the repository, workspace checks are exposed natively via Hatch:
+For developers validating changes or contributing to the repository, the workspace checks run through uv:
 
 ```bash
-hatch run test    # Run unit testing suite via pytest
-hatch run lint    # Validate style and security rules via ruff check
-hatch run format  # Apply automated codebase formatting via ruff format
+uv run pytest                 # Run the unit tests
+uv run ruff check .           # Validate style and security rules
+uv run ruff format --check .  # Check formatting
+uv run ruff format .          # Apply formatting
 ```
 
 Contributor conventions (commits, branches, the no-fabrication rules) are in [CLAUDE.md](CLAUDE.md).
@@ -275,6 +285,6 @@ The package code lives under `src/resume_optimizer/`, and its prompts and Jinja2
 ship with it as package data. Tests are under `tests/`; design docs, such as the decisions log
 and the plan, are under `docs/`; and the GitHub workflows, their helper scripts, the Dependabot
 configuration and the issue templates are under `.github/`. The synthetic `example_*` ledger CSVs
-sit at the root, and the Hatch and ruff settings are in `pyproject.toml`. `git ls-files` lists the
+sit at the root, and the uv and ruff settings are in `pyproject.toml`. `git ls-files` lists the
 tracked files, and plan §3.1 ([docs/proposals/pipeline-plan.md](docs/proposals/pipeline-plan.md))
 says where the things that are not in this repo live.

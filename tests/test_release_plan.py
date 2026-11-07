@@ -11,7 +11,6 @@ import pytest
 SCRIPT: Path = Path(__file__).resolve().parent.parent / ".github" / "scripts" / "release_plan.py"
 WHEEL: str = "resume_optimizer-0.1.0-py3-none-any.whl"
 CHANGELOG: str = "# Changelog\n\n## Unreleased\n\n## [0.1.0] - 2026-11-05\n\nFirst release.\n"
-NAME: str = "__vers" + "ion__"  # built so no line of this file starts with the assignment
 
 
 def _load() -> ModuleType:
@@ -31,14 +30,14 @@ def _load() -> ModuleType:
 release_plan: ModuleType = _load()
 
 
-def _init(version: str = "0.1.0") -> str:
-    return f'"""Doc."""\n\n{NAME} = "{version}"\n'
+def _pyproject(version: str = "0.1.0") -> str:
+    return f'[project]\nname = "resume-optimizer"\nversion = "{version}"\n'
 
 
 def _run(
     tmp_path: Path,
     *,
-    init: str | None = None,
+    pyproject: str | None = None,
     wheel: str = WHEEL,
     changelog: str = CHANGELOG,
     existing: str = "",
@@ -46,7 +45,7 @@ def _run(
     drafts: str = "",
 ) -> subprocess.CompletedProcess[str]:
     files: dict[str, str] = {
-        "init.py": _init() if init is None else init,
+        "pyproject.toml": _pyproject() if pyproject is None else pyproject,
         "CHANGELOG.md": changelog,
         "all.txt": existing,
         "merged.txt": merged,
@@ -59,8 +58,8 @@ def _run(
             sys.executable,
             "-B",
             str(SCRIPT),
-            "--init",
-            str(tmp_path / "init.py"),
+            "--pyproject",
+            str(tmp_path / "pyproject.toml"),
             "--wheel",
             wheel,
             "--changelog",
@@ -96,7 +95,7 @@ def test_first_release_prints_exactly_three_lines(tmp_path: Path) -> None:
 def test_later_release_names_the_previous_tag_and_adds_the_commit_heading(tmp_path: Path) -> None:
     result = _run(
         tmp_path,
-        init=_init("0.10.0"),
+        pyproject=_pyproject("0.10.0"),
         wheel=WHEEL.replace("0.1.0", "0.10.0"),
         changelog=CHANGELOG.replace("0.1.0", "0.10.0"),
         existing="v0.9.0\nv0.1.0\n",
@@ -112,27 +111,22 @@ def test_later_release_names_the_previous_tag_and_adds_the_commit_heading(tmp_pa
 @pytest.mark.parametrize(
     "bad",
     [
-        f'{NAME}: str = "0.1.0"\n',
         "x = 1\n",
-        f'{NAME} = "0.1.0"\n{NAME} = "0.1.0"\n',
-        f"{NAME} = 1\n",
-        f'{NAME} = "0.1.0\\n"\n',
-        f'{NAME} = "0.1.0rc1"\n',
-        f'{NAME} = "0.1.0-dev"\n',
-        f'{NAME} = "\\u0660.1.0"\n',
-        f"{NAME} = [\n",
+        "project = 1\n",
+        '[project]\nname = "x"\ndynamic = "version"\n',
+        '[project]\nname = "x"\nversion = "0.1.0"\ndynamic = ["version", 1]\n',
+        '[project]\nname = "x"\n',
+        '[project]\nname = "x"\nversion = "0.1.0"\ndynamic = ["version"]\n',
+        '[project]\nname = "x"\nversion = 1\n',
+        '[project]\nname = "x"\nversion = "0.1.0\\n"\n',
+        '[project]\nname = "x"\nversion = "0.1.0rc1"\n',
+        '[project]\nname = "x"\nversion = "0.1.0-dev"\n',
+        '[project]\nname = "x"\nversion = "\u0660.1.0"\n',
+        "[project\n",
     ],
 )
 def test_refuses_a_bad_version_source(tmp_path: Path, bad: str) -> None:
-    _refused(_run(tmp_path, init=bad))
-
-
-def test_the_version_is_read_without_importing_the_file(tmp_path: Path) -> None:
-    marker: Path = tmp_path / "ran.txt"
-    code: str = f"open({str(marker)!r}, 'w').write('x')\n" + _init()
-    result = _run(tmp_path, init=code)
-    assert result.returncode == 0
-    assert not marker.exists()
+    _refused(_run(tmp_path, pyproject=bad))
 
 
 @pytest.mark.parametrize(
@@ -166,7 +160,7 @@ def test_the_comparison_is_numeric_not_textual(tmp_path: Path) -> None:
     _refused(
         _run(
             tmp_path,
-            init=_init("0.9.0"),
+            pyproject=_pyproject("0.9.0"),
             wheel=WHEEL.replace("0.1.0", "0.9.0"),
             changelog=CHANGELOG.replace("0.1.0", "0.9.0"),
             merged="v0.10.0\n",

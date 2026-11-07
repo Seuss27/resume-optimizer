@@ -1,7 +1,7 @@
 version: 2
 updates:
-  # Monitor the pins in pyproject.toml
-  - package-ecosystem: "pip"
+  # Monitor the pins in pyproject.toml and the locked set in uv.lock
+  - package-ecosystem: "uv"
     directory: "/"
     schedule:
       interval: "daily"
