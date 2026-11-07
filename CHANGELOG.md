@@ -13,8 +13,9 @@ All notable changes to this project are recorded here, in the
 
 ## Unreleased
 
-- The development environment, lock and build now run through uv. The wheel's contents are
-  unchanged. Contributors run `uv sync`.
+- The development environment, lock and build now run through uv. The wheel ships the same
+  modules and package data, and `__version__` now reads the installed metadata. Contributors run
+  `uv sync`.
 - The page count no longer closes an open Word, a timed-out converter's process tree is killed
   (and so is the Word it started, when that Word can be identified), and a LibreOffice found
   only on PATH is used on Windows.

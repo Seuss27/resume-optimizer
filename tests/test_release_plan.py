@@ -118,7 +118,7 @@ def test_later_release_names_the_previous_tag_and_adds_the_commit_heading(tmp_pa
         '[project]\nname = "x"\n',
         '[project]\nname = "x"\nversion = "0.1.0"\ndynamic = ["version"]\n',
         '[project]\nname = "x"\nversion = 1\n',
-        '[project]\nname = "x"\nversion = "0.1.0\n"\n',
+        '[project]\nname = "x"\nversion = "0.1.0\\n"\n',
         '[project]\nname = "x"\nversion = "0.1.0rc1"\n',
         '[project]\nname = "x"\nversion = "0.1.0-dev"\n',
         '[project]\nname = "x"\nversion = "\u0660.1.0"\n',
