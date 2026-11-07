@@ -1,9 +1,18 @@
 # Next steps
 
-**Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `implementing`. #88's spec is
-approved; #115's spec is next.
+**Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `implementing`. The specs for #88
+and #115 are approved; #113's spec is next.
 
 **Just done:**
+- #115's spec, comment 6699495108, approved by the maintainer's reaction. It was redrafted
+  against #115's template-facts section (603-Identity/devcontainers `template/` at 171c02f,
+  callers pinned v1.6) and replaces the escalated draft 6692194503, which the maintainer had
+  answered (6699261544, `choice=amend`). Critic gate (`architect`, `security-critic`): 4 rounds,
+  converged. The spec moves the in-container green-gate run to after merge, since the broker
+  entry and dev token only exist then. The PR carries `Refs: #115`, not `Closes:`, and the
+  maintainer closes #115 once that run is recorded. `.devcontainer/` joins `code_paths`, and
+  `secret-scan.yml` needs no edit. One optional tightening was left out: the retitle rule for
+  Dependabot docker bumps could also say the subject stays on one line.
 - #88's spec, comment 6690566962, approved by the maintainer's reaction. It replaces three
   escalated drafts (6686357536, 6687169809, 6689109312). PR 1 is built from a host session in a
   fresh clone and published as `glunk-admin[bot]` with a down-scoped `wow-admin` token, and after
@@ -17,17 +26,15 @@ approved; #115's spec is next.
   broker entry and dev token after #115 merges, and the fresh host critic session for PR 1.
   `glunk-review` now has access to this repo.
 
-**Next:** task #115 — draft the spec for adopting the shared dev-App container with
-`/way-of-working:spec-task 115` and post it on #115 for the maintainer to approve; build nothing.
-Assigned model: **opus** (architect). Per #88's spec, #115 lands after PR 1 merges, is published
-as `glunk-admin[bot]` by the same host route, and is the gate's first live run. It covers
-`.devcontainer/` from the shared template, the devcontainer-image caller and the
-`secret-scan.yml` edit, and waits on glunk-works/claude-workbench#1226 and the #1165 procedure.
-Order after that: #113's spec and build, then #88's build, then #115's build.
+**Next:** task #113 — draft the spec for moving the environment, lock and build backend to uv
+with `/way-of-working:spec-task 113` and post it on #113 for the maintainer to approve; build
+nothing. Assigned model: **opus** (architect). Build order after that: #113's build, then #88's
+PR 1, then #115's build (published as `glunk-admin[bot]` by #88's host route, the review gate's
+first live run, waiting on glunk-works/claude-workbench#1226 and the #1165 procedure).
 
 The package rename (#117) waits for the uv move (#113), as `RO-D19` records.
 
-**HITL Gate: NONE OPEN** — next gate: the maintainer approves the spec on #115 before any build starts
+**HITL Gate: NONE OPEN** — next gate: the maintainer approves the spec on #113 before any build starts
 
 **Open for the owner (non-blocking):**
 - Neither #117 nor #118 owns the project's display title (`CLAUDE.md` and readme headings, the
