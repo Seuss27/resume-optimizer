@@ -1,41 +1,32 @@
 # Next steps
 
 **Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `implementing`. The specs for #88,
-#113 and #115 are approved. #112's spec is next.
+#112, #113 and #115 are approved. #112's build is next.
 
 **Just done:**
-- #113's spec, comment 6706708521, is approved by the maintainer's reaction. It moves the
-  environment, the lock and the build backend to uv, and makes the version in `pyproject.toml`
-  the single source.
-  - Critic gate: `architect`, `security-critic`, `docs-consistency`; 7 rounds, converged.
-  - Round 5 hit the cap with one open finding, so the session held the draft as an escalation,
-    unposted. The maintainer then authorized rounds 6 and 7. Round 6 found that the CI-wheel
-    comparison checked the wrong commit, and round 7 returned only tightenings. Round 7's two
-    one-clause tightenings were applied after that round and not re-graded.
-  - The build waits on #112. Before building, `docs/decisions.md` must carry #112's entry,
-    covering the version source moving to `pyproject.toml` and `RO-D18`'s residual about the pip
-    cache and the unhashed build backend. Otherwise the builder stops.
-- #112 moved from milestone 11 (T01) into S02, because #113's build depends on it.
+- #112's spec, [comment 6707009113](https://github.com/glunk-works/resume-orchestrator/issues/112#issuecomment-6707009113),
+  is approved by the maintainer's reaction. It adds `RO-D20` (the toolchain moves from Hatch to
+  uv; the version source moves to `pyproject.toml`; `RO-D18` partly superseded) and amends plan
+  B3 and B8. Docs only. Drafted against `main` at `38acc57`.
+  - Critic gate: `architect`, `docs-consistency`; 3 rounds, converged. Four one-clause
+    tightenings from round 3 were applied after that round and not re-graded.
+  - The spec proposes that ruff follows this repo's own Dependabot pins. The build PR asks the
+    maintainer to confirm that choice, and the entry is dated by the confirmation.
+  - spec-task could not read #113's spec comment, so the spec's `UV_VERSION`-as-`env:` and
+    interpreter-scope wording was not compared with it. The spec tells the builder to follow
+    #113's spec (comment 6706708521) where they differ and to say so in the PR.
 
-**Next:** task #112 — draft the spec for recording the decision to move the toolchain to uv with
-`/way-of-working:spec-task 112`, and post it on #112 for the maintainer to approve; build nothing.
-Assigned model: **opus** (architect). Build order after that:
-1. #112's build.
-2. #113's build.
-3. #88's PR 1.
-4. #115's build, published as `glunk-admin[bot]` by #88's host route. It is the review gate's
+**Next:** task #112 — build the `RO-D20` decision entry and the plan B3/B8 amendments per the
+approved spec (comment 6707009113 on #112), and open the PR asking the maintainer to confirm the
+ruff choice; docs only. Assigned model: **sonnet** (coder). Build order after that:
+1. #113's build.
+2. #88's PR 1.
+3. #115's build, published as `glunk-admin[bot]` by #88's host route. It is the review gate's
    first live run, and waits on glunk-works/claude-workbench#1226 and the #1165 procedure.
-
-#112's decision entry should cover what #113's spec hands to it:
-- the version source;
-- `RO-D18`'s tag sentence and residual;
-- uv's pinning: CI pins it exactly through `UV_VERSION` and checks that against the `uv_build`
-  pin, while `required-version` in `pyproject.toml` is only a floor;
-- the interpreter now coming from uv, not `setup-python`.
 
 The package rename (#117) waits for the uv move (#113), as `RO-D19` records.
 
-**HITL Gate: NONE OPEN** — next gate: the maintainer approves the spec on #112 before any build starts
+**HITL Gate: NONE OPEN** — next gate: the maintainer confirms the ruff choice and approves the #112 build PR
 
 **Open for the owner (non-blocking):**
 - Neither #117 nor #118 owns the project's display title (`CLAUDE.md` and readme headings, the
