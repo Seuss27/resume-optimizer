@@ -1,40 +1,41 @@
 # Next steps
 
-**Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `implementing`. The specs for #88
-and #115 are approved; #113's spec is next.
+**Now:** Sprint S02, "Foundation and de-risk" (milestone 2), `implementing`. The specs for #88,
+#113 and #115 are approved. #112's spec is next.
 
 **Just done:**
-- #115's spec, comment 6699495108, approved by the maintainer's reaction. It was redrafted
-  against #115's template-facts section (603-Identity/devcontainers `template/` at 171c02f,
-  callers pinned v1.6) and replaces the escalated draft 6692194503, which the maintainer had
-  answered (6699261544, `choice=amend`). Critic gate (`architect`, `security-critic`): 4 rounds,
-  converged. The spec moves the in-container green-gate run to after merge, since the broker
-  entry and dev token only exist then. The PR carries `Refs: #115`, not `Closes:`, and the
-  maintainer closes #115 once that run is recorded. `.devcontainer/` joins `code_paths`, and
-  `secret-scan.yml` needs no edit. One optional tightening was left out: the retitle rule for
-  Dependabot docker bumps could also say the subject stays on one line.
-- #88's spec, comment 6690566962, approved by the maintainer's reaction. It replaces three
-  escalated drafts (6686357536, 6687169809, 6689109312). PR 1 is built from a host session in a
-  fresh clone and published as `glunk-admin[bot]` with a down-scoped `wow-admin` token, and after
-  the cutover dev-workflow sessions run in dev containers. Critic gate (`architect`,
-  `security-critic`, `docs-consistency`): 3 rounds, converged. Two tightenings were left out: the
-  rename-and-revoke route for a leftover `.mint.*` file should require a complete `expires_at`
-  line, and the review clone stays outside container mounts for the whole build.
-- #113 and #115 moved from milestone 11 (T01) into S02, because #88's spec needs #113 merged and
-  #115's spec approved before its build starts.
-- The claude-workbench driver confirmed the spec as posted, including `loop_app` declared, the
-  broker entry and dev token after #115 merges, and the fresh host critic session for PR 1.
-  `glunk-review` now has access to this repo.
+- #113's spec, comment 6706708521, is approved by the maintainer's reaction. It moves the
+  environment, the lock and the build backend to uv, and makes the version in `pyproject.toml`
+  the single source.
+  - Critic gate: `architect`, `security-critic`, `docs-consistency`; 7 rounds, converged.
+  - Round 5 hit the cap with one open finding, so the session held the draft as an escalation,
+    unposted. The maintainer then authorized rounds 6 and 7. Round 6 found that the CI-wheel
+    comparison checked the wrong commit, and round 7 returned only tightenings. Round 7's two
+    one-clause tightenings were applied after that round and not re-graded.
+  - The build waits on #112. Before building, `docs/decisions.md` must carry #112's entry,
+    covering the version source moving to `pyproject.toml` and `RO-D18`'s residual about the pip
+    cache and the unhashed build backend. Otherwise the builder stops.
+- #112 moved from milestone 11 (T01) into S02, because #113's build depends on it.
 
-**Next:** task #113 — draft the spec for moving the environment, lock and build backend to uv
-with `/way-of-working:spec-task 113` and post it on #113 for the maintainer to approve; build
-nothing. Assigned model: **opus** (architect). Build order after that: #113's build, then #88's
-PR 1, then #115's build (published as `glunk-admin[bot]` by #88's host route, the review gate's
-first live run, waiting on glunk-works/claude-workbench#1226 and the #1165 procedure).
+**Next:** task #112 — draft the spec for recording the decision to move the toolchain to uv with
+`/way-of-working:spec-task 112`, and post it on #112 for the maintainer to approve; build nothing.
+Assigned model: **opus** (architect). Build order after that:
+1. #112's build.
+2. #113's build.
+3. #88's PR 1.
+4. #115's build, published as `glunk-admin[bot]` by #88's host route. It is the review gate's
+   first live run, and waits on glunk-works/claude-workbench#1226 and the #1165 procedure.
+
+#112's decision entry should cover what #113's spec hands to it:
+- the version source;
+- `RO-D18`'s tag sentence and residual;
+- uv's pinning: CI pins it exactly through `UV_VERSION` and checks that against the `uv_build`
+  pin, while `required-version` in `pyproject.toml` is only a floor;
+- the interpreter now coming from uv, not `setup-python`.
 
 The package rename (#117) waits for the uv move (#113), as `RO-D19` records.
 
-**HITL Gate: NONE OPEN** — next gate: the maintainer approves the spec on #113 before any build starts
+**HITL Gate: NONE OPEN** — next gate: the maintainer approves the spec on #112 before any build starts
 
 **Open for the owner (non-blocking):**
 - Neither #117 nor #118 owns the project's display title (`CLAUDE.md` and readme headings, the
@@ -73,13 +74,16 @@ The package rename (#117) waits for the uv move (#113), as `RO-D19` records.
   - no symlink check on the log file
   - a half-detached handler pair is not repaired
   - the docstring and template say "WARNING" where the filter passes WARNING and above
-- Milestone 11's (T01's) description may still list #113 and #115, which are now on S02.
+- Milestone 11's (T01's) description may still list #112, #113 and #115, which are now on S02.
 - Raise naming uv in the claude-workbench Python conventions, so the glunk-works repos follow
   (T01's milestone description says this is outside this repo). Place
   glunk-works/claude-workbench#1349 in that repo's milestones.
 - If `secrets / scan` fails with `couldn't find remote ref refs/pull/<N>/head`, the cause is
   GitHub, not a secret. GitHub created only the merge ref, and a re-run fails the same way.
   Pushing a commit to the branch creates the head ref (PR #107).
+- The spec-mode cap of 4 fix-and-re-run rounds was hit on #113. Rounds 6 and 7 ran only on the
+  maintainer's say-so. That suggests specs for multi-surface tasks like a toolchain move may need
+  splitting.
 
 **Pointers:**
 - the plan: [docs/proposals/pipeline-plan.md](../docs/proposals/pipeline-plan.md)
