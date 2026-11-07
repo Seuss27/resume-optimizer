@@ -270,7 +270,7 @@ vocabularies* table keeps the product's run orchestration apart from the dev wor
 
 ## RO-D20 — The toolchain moves from Hatch to uv
 
-*Decided <date the maintainer confirms the ruff choice> (maintainer).*
+*Decided 2026-11-07 (maintainer).*
 uv manages the project environment, the lock file (`uv.lock`, committed) and command running
 (`uv run`), and `uv_build` replaces `hatchling` as the build backend. Hatch is no longer used. The
 move lands in its own task, after which `RO-D19`'s package rename follows.
