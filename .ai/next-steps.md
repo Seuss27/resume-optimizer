@@ -5,6 +5,12 @@
 is uv.
 
 **Just done:**
+- Checkout layout, no code changed. A fresh host clone for the #88 PR 1 build now exists at
+  `projects/glunk-works/resume-orchestrator-host`, on `main`, outside any container mount. The
+  working checkout is moving from `projects/Seuss27/resume-optimizer` to
+  `projects/glunk-works/resume-orchestrator`, with its `-main` worktree (`git worktree move`), the
+  Claude history directory under `~/.claude/projects` renamed to match, and `.venv` rebuilt by
+  `uv sync`. Until the move is done, paths in this repo's sessions may still read the old name.
 - #113's build, [PR #145](https://github.com/glunk-works/resume-orchestrator/pull/145), merged at
   `03370d1`: the environment, lock and build moved from Hatch to uv, with `uv_build` pinned.
   - CI was green on the PR, `test-py315` and the wheel smoke included.
@@ -17,14 +23,18 @@ is uv.
   - Not measured by this session, though #113's spec asks for them in the PR body: the CI wheel
     artifact against `refs/pull/145/merge`, and the SBOM and audit counts.
 
-**Next:** task #88 — build PR 1 per its approved spec (comment 6690566962 on #88). Assigned model:
-**sonnet** (coder). Build order after that:
+**Next:** task #88 — build PR 1 per its approved spec (comment 6690566962 on #88), only in the host
+clone `resume-orchestrator-host`, never in this checkout. Assigned model: **sonnet** (coder). The
+clone has no `.ai/state.json` (git-ignored), so a resume there reads this ledger alone and waits for
+a "go". Build order after that:
 1. #115's build, published as `glunk-admin[bot]` by #88's host route. It is the review gate's
    first live run, and waits on glunk-works/claude-workbench#1226 and the #1165 procedure.
 
 The package rename (#117) is no longer blocked by the uv move, as `RO-D19` records.
 
-**HITL Gate: NONE OPEN** — next gate: the maintainer approves the #88 PR 1 build PR
+**HITL Gate: OPEN** — the maintainer confirms the #88 spec order preconditions and starts the PR 1
+build in resume-orchestrator-host. The next gate after that is the maintainer approving the #88
+PR 1 build PR.
 
 **Open for the owner (non-blocking):**
 - Neither #117 nor #118 owns the project's display title (`CLAUDE.md` and readme headings, the
